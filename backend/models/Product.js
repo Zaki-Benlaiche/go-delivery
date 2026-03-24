@@ -16,8 +16,8 @@ const Product = sequelize.define('Product', {
     allowNull: false,
   },
   image: {
-    type: DataTypes.STRING,
-    defaultValue: '/default-product.png',
+    type: DataTypes.TEXT,
+    defaultValue: '🍽️',
   },
   category: {
     type: DataTypes.STRING,

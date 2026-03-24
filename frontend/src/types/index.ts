@@ -14,6 +14,7 @@ export interface Restaurant {
   description: string;
   image: string;
   address: string;
+  category?: string;
   isActive: boolean;
   userId: number;
   products?: Product[];

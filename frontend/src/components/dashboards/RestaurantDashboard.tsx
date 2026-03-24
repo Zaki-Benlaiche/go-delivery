@@ -15,6 +15,17 @@ export default function RestaurantDashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Plats', image: '🍽️' });
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        callback(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
     fetchMenu();
@@ -341,8 +352,22 @@ export default function RestaurantDashboard() {
                     </div>
                   </div>
                   <div>
-                    <label>URL de l'image (ou Emoji)</label>
-                    <input type="text" className="input" placeholder="ex: https://... ou 🍕" value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} />
+                    <label>Image du produit (Fichier ou URL)</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input type="text" className="input" placeholder="URL ou Emoji" value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} style={{ flex: 1 }} />
+                      <label className="btn btn-secondary" style={{ cursor: 'pointer', padding: '10px' }}>
+                        📁 <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, (b) => setNewProduct({...newProduct, image: b}))} />
+                      </label>
+                    </div>
+                    {newProduct.image && (
+                      <div style={{ marginTop: '10px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+                        {newProduct.image.startsWith('http') || newProduct.image.startsWith('data:') ? (
+                           <img src={newProduct.image} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+                        ) : (
+                           <span style={{ fontSize: '2rem' }}>{newProduct.image}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowAddModal(false)}>Annuler</button>
@@ -360,44 +385,98 @@ export default function RestaurantDashboard() {
           ========================================================= */}
       {activeTab === 'settings' && restaurant && (
         <div className="fade-in">
-          <h2 className="section-title">Paramètres du Restaurant</h2>
-          <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              await updateRestaurant({
-                name: formData.get('name') as string,
-                description: formData.get('description') as string,
-                address: formData.get('address') as string,
-                image: formData.get('image') as string,
-              });
-              alert('Paramètres mis à jour avec succès !');
-            }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <label>Nom du Restaurant</label>
-                <input name="name" type="text" className="input" defaultValue={restaurant.name} required />
-              </div>
-              <div>
-                <label>URL du Logo / Image de Couverture</label>
-                <input name="image" type="url" className="input" defaultValue={restaurant.image} placeholder="https://images.unsplash.com/..." />
-                {restaurant.image?.startsWith('http') && (
-                  <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
-                    <img src={restaurant.image} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                )}
-              </div>
-              <div>
-                <label>Description (Slogan)</label>
-                <textarea name="description" className="input" defaultValue={restaurant.description} rows={3}></textarea>
-              </div>
-              <div>
-                <label>Adresse Complète</label>
-                <input name="address" type="text" className="input" defaultValue={restaurant.address} />
-              </div>
-              <button type="submit" className="btn btn-primary" style={{ marginTop: '10px' }}>
-                Enregistrer les modifications
-              </button>
-            </form>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+             <div className="card" style={{ 
+               padding: '0', 
+               overflow: 'hidden', 
+               border: 'none', 
+               boxShadow: '0 30px 60px rgba(0,0,0,0.4)',
+               background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+               backdropFilter: 'blur(20px)',
+               borderTop: '1px solid rgba(255,255,255,0.1)'
+             }}>
+               {/* Hero Section in Settings */}
+               <div style={{ height: '180px', position: 'relative', background: 'var(--primary-glow)' }}>
+                 {restaurant.image && (restaurant.image.startsWith('http') || restaurant.image.startsWith('data:')) ? (
+                   <img src={restaurant.image} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3 }} />
+                 ) : null}
+                 <div style={{ position: 'absolute', bottom: '-40px', left: '40px', display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+                    <div style={{ 
+                      width: '120px', 
+                      height: '120px', 
+                      borderRadius: '24px', 
+                      background: 'var(--bg-card)', 
+                      border: '4px solid var(--bg)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      fontSize: '4rem',
+                      overflow: 'hidden',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+                    }}>
+                      {restaurant.image && (restaurant.image.startsWith('http') || restaurant.image.startsWith('data:')) ? (
+                        <img src={restaurant.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span>{restaurant.image || '🏪'}</span>
+                      )}
+                    </div>
+                    <div style={{ marginBottom: '45px' }}>
+                       <h2 style={{ margin: 0, fontSize: '1.8rem', color: 'white' }}>{restaurant.name}</h2>
+                       <p style={{ margin: 0, color: 'var(--text-muted)' }}>{restaurant.category || 'Restaurant Partner'}</p>
+                    </div>
+                 </div>
+               </div>
+
+               <form onSubmit={async (e) => {
+                 e.preventDefault();
+                 const formData = new FormData(e.currentTarget);
+                 // We collect the image from state because file inputs are handled separately
+                 await updateRestaurant({
+                   name: (e.currentTarget.elements.namedItem('name') as HTMLInputElement).value,
+                   description: (e.currentTarget.elements.namedItem('description') as HTMLTextAreaElement).value,
+                   address: (e.currentTarget.elements.namedItem('address') as HTMLInputElement).value,
+                   image: (e.currentTarget.elements.namedItem('image_data') as HTMLInputElement).value,
+                 });
+                 alert('✅ Profil mis à jour avec succès !');
+               }} style={{ padding: '80px 40px 40px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                 
+                 <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Logo / Photo de Couverture</label>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                       <input name="image_data" id="image_data" type="text" className="input" defaultValue={restaurant.image} placeholder="Lien direct ou Base64..." style={{ flex: 1 }} />
+                       <label className="btn btn-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         <Plus size={18} /> Téléverser 
+                         <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, (b) => {
+                           const input = document.getElementById('image_data') as HTMLInputElement;
+                           if (input) input.value = b;
+                         })} />
+                       </label>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '6px' }}>Sélectionnez une photo de votre établissement ou de votre logo.</p>
+                 </div>
+
+                 <div>
+                   <label style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Nom de l'établissement</label>
+                   <input name="name" type="text" className="input" defaultValue={restaurant.name} required style={{ marginTop: '8px' }} />
+                 </div>
+
+                 <div>
+                   <label style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Adresse physique</label>
+                   <input name="address" type="text" className="input" defaultValue={restaurant.address} style={{ marginTop: '8px' }} />
+                 </div>
+
+                 <div style={{ gridColumn: '1 / -1' }}>
+                   <label style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Description & Slogan</label>
+                   <textarea name="description" className="input" defaultValue={restaurant.description} rows={3} style={{ marginTop: '8px' }}></textarea>
+                 </div>
+
+                 <div style={{ gridColumn: '1 / -1', marginTop: '20px' }}>
+                    <button type="submit" className="btn btn-primary btn-block" style={{ padding: '16px', fontSize: '1.1rem', fontWeight: 800 }}>
+                      Mettre à jour mon Restaurant
+                    </button>
+                 </div>
+               </form>
+             </div>
           </div>
         </div>
       )}

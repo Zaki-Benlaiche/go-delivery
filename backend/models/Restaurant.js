@@ -16,8 +16,8 @@ const Restaurant = sequelize.define('Restaurant', {
     defaultValue: '',
   },
   image: {
-    type: DataTypes.STRING,
-    defaultValue: '/default-restaurant.png',
+    type: DataTypes.TEXT,
+    defaultValue: '🏪',
   },
   address: {
     type: DataTypes.STRING,

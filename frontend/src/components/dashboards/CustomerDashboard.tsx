@@ -18,7 +18,7 @@ export default function CustomerDashboard() {
 
   const renderMedia = (imageStr: string | undefined, defaultEmoji = '🍽️') => {
     if (!imageStr) return <span>{defaultEmoji}</span>;
-    if (imageStr.startsWith('http')) {
+    if (imageStr.startsWith('http') || imageStr.startsWith('data:')) {
       return <img src={imageStr} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
     }
     return <span>{imageStr}</span>;
