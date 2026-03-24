@@ -10,10 +10,14 @@ const restaurantRoutes = require('./routes/restaurantRoutes');
 
 const app = express();
 const server = http.createServer(app);
+
+// NOTE: In production, origin should be Restricted to the Frontend URL
+// e.g., const io = new Server(server, { cors: { origin: process.env.FRONTEND_URL } });
 const io = new Server(server, { cors: { origin: '*' } });
 
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // TODO: Restrict for production
+app.use(express.json({ limit: '50mb' })); // Increased limit for Base64 image payloads
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Routes
 app.use('/api/auth', authRoutes);
