@@ -1,36 +1,49 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
-import type { Product } from '@/types';
+import type { Product, Restaurant } from '@/types';
 
 interface MenuState {
+  restaurant: Restaurant | null;
   products: Product[];
   isLoading: boolean;
   fetchMenu: () => Promise<void>;
+  updateRestaurant: (data: Partial<Restaurant>) => Promise<void>;
   addProduct: (product: Omit<Product, 'id' | 'restaurantId'>) => Promise<void>;
   updateProduct: (id: number, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
+  restaurant: null,
   products: [],
   isLoading: false,
 
   fetchMenu: async () => {
     set({ isLoading: true });
     try {
-      const { data } = await api.get('/auth/me'); // The auth/me route inclides the restaurant and its products. But wait, we need products.
-      // Actually, better to fetch the restaurant's products specifically or get them from the user profile if included.
-      // Let's create a specific fetch or use the data from authStore. Wait, auth/me returns the user with restaurant, but not products.
-      // Let's just fetch the restaurant's full details.
+      const { data } = await api.get('/auth/me');
       if (data.restaurant) {
         const resData = await api.get(`/restaurants/${data.restaurant.id}`);
-        set({ products: resData.data.products || [], isLoading: false });
+        set({ 
+          restaurant: resData.data, 
+          products: resData.data.products || [], 
+          isLoading: false 
+        });
       } else {
         set({ isLoading: false });
       }
     } catch (err) {
       console.error('fetchMenu error:', err);
       set({ isLoading: false });
+    }
+  },
+
+  updateRestaurant: async (updateData) => {
+    try {
+      const { data } = await api.put('/restaurants/mine', updateData);
+      set({ restaurant: data });
+    } catch (err) {
+      console.error('updateRestaurant error:', err);
     }
   },
 

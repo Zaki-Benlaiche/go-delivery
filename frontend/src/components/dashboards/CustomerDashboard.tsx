@@ -16,6 +16,14 @@ export default function CustomerDashboard() {
   const [activeTab, setActiveTab] = useState<'explore' | 'orders'>('explore');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const renderMedia = (imageStr: string | undefined, defaultEmoji = '🍽️') => {
+    if (!imageStr) return <span>{defaultEmoji}</span>;
+    if (imageStr.startsWith('http')) {
+      return <img src={imageStr} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+    }
+    return <span>{imageStr}</span>;
+  };
+
   const loadRestaurants = async () => {
     try {
       const res = await api.get<Restaurant[]>('/restaurants');
@@ -80,55 +88,53 @@ export default function CustomerDashboard() {
   return (
     <div className="customer-app" style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
       
-      {/* 🟢 CUSTOMER TOP NAVIGATION (TABS) */}
-      {!selectedRestaurant && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
-          <div style={{ display: 'inline-flex', background: 'var(--bg-elevated)', padding: '6px', borderRadius: '30px', gap: '8px' }}>
-            <button 
-              onClick={() => setActiveTab('explore')}
-              style={{ 
-                padding: '12px 32px', 
-                borderRadius: '24px', 
-                border: 'none', 
-                background: activeTab === 'explore' ? 'var(--primary)' : 'transparent',
-                color: activeTab === 'explore' ? '#fff' : 'var(--text-muted)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '1rem'
-              }}
-            >
-              <Utensils size={18} /> Explorer
-            </button>
-            <button 
-              onClick={() => setActiveTab('orders')}
-              style={{ 
-                padding: '12px 32px', 
-                borderRadius: '24px', 
-                border: 'none', 
-                background: activeTab === 'orders' ? 'var(--primary)' : 'transparent',
-                color: activeTab === 'orders' ? '#fff' : 'var(--text-muted)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '1rem',
-                position: 'relative'
-              }}
-            >
-              <Package size={18} /> Mes Commandes
-              {activeOrders.length > 0 && (
-                <span style={{ position: 'absolute', top: '8px', right: '12px', width: '10px', height: '10px', background: 'var(--accent)', borderRadius: '50%' }} className="pulse"></span>
-              )}
-            </button>
-          </div>
+      {/* 🟢 CUSTOMER TOP NAVIGATION (TABS) - Always Visible for easy navigation */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', background: 'var(--bg-elevated)', padding: '6px', borderRadius: '30px', gap: '8px' }}>
+          <button 
+            onClick={() => { setActiveTab('explore'); setSelectedRestaurant(null); }}
+            style={{ 
+              padding: '12px 32px', 
+              borderRadius: '24px', 
+              border: 'none', 
+              background: activeTab === 'explore' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'explore' ? '#fff' : 'var(--text-muted)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '1rem'
+            }}
+          >
+            <Utensils size={18} /> Explorer
+          </button>
+          <button 
+            onClick={() => setActiveTab('orders')}
+            style={{ 
+              padding: '12px 32px', 
+              borderRadius: '24px', 
+              border: 'none', 
+              background: activeTab === 'orders' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'orders' ? '#fff' : 'var(--text-muted)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '1rem',
+              position: 'relative'
+            }}
+          >
+            <Package size={18} /> Mes Commandes
+            {activeOrders.length > 0 && (
+              <span style={{ position: 'absolute', top: '8px', right: '12px', width: '10px', height: '10px', background: 'var(--accent)', borderRadius: '50%' }} className="pulse"></span>
+            )}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* =========================================================
           TAB 1: EXPLORER (Restaurants)
@@ -175,8 +181,8 @@ export default function CustomerDashboard() {
             <div className="grid grid-3">
               {filteredRestaurants.map((r) => (
                 <div key={r.id} className="card" onClick={() => setSelectedRestaurant(r)} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden', transition: 'transform 0.3s, box-shadow 0.3s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-8px)'; e.currentTarget.style.boxShadow = '0 15px 30px rgba(0,0,0,0.3)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
-                  <div style={{ height: '160px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', position: 'relative' }}>
-                    {r.image}
+                  <div style={{ height: '160px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', position: 'relative', overflow: 'hidden' }}>
+                    {renderMedia(r.image, '🏪')}
                     <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '6px', borderRadius: '50%', color: 'white' }}>
                       <Heart size={18} />
                     </div>
@@ -223,19 +229,19 @@ export default function CustomerDashboard() {
           <div style={{ position: 'relative', height: '240px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: '24px', marginBottom: '40px', display: 'flex', alignItems: 'center', padding: '40px', overflow: 'hidden' }}>
             <button 
               className="btn btn-secondary" 
-              onClick={() => { setSelectedRestaurant(null); setCart({}); loadRestaurants(); }} 
+              onClick={() => { setSelectedRestaurant(null); loadRestaurants(); }} 
               style={{ position: 'absolute', top: '24px', left: '24px', width: '40px', height: '40px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: 'none', color: 'white' }}
             >
               <ChevronLeft size={24} />
             </button>
             
             <div style={{ position: 'absolute', right: '40px', fontSize: '10rem', opacity: 0.1, filter: 'blur(4px)', transform: 'rotate(15deg)' }}>
-              {selectedRestaurant.image}
+              <span>{selectedRestaurant.image?.startsWith('http') ? '🍽️' : selectedRestaurant.image}</span>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '32px', zIndex: 10 }}>
-              <div style={{ fontSize: '5rem', background: 'var(--bg-card)', width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
-                {selectedRestaurant.image}
+              <div style={{ fontSize: '5rem', background: 'var(--bg-card)', width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+                {renderMedia(selectedRestaurant.image)}
               </div>
               <div style={{ color: 'white' }}>
                 <h1 style={{ fontSize: '2.5rem', marginBottom: '8px', fontWeight: 900 }}>{selectedRestaurant.name}</h1>
@@ -273,8 +279,8 @@ export default function CustomerDashboard() {
                   {selectedRestaurant.products.map((product: Product) => (
                     <div key={product.id} className="card" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', transition: 'transform 0.2s', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'} onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}>
                       <div style={{ display: 'flex', gap: '16px' }}>
-                        <div style={{ fontSize: '3rem', background: 'var(--bg)', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', flexShrink: 0 }}>
-                          {product.image}
+                        <div style={{ fontSize: '3rem', background: 'var(--bg)', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px', flexShrink: 0, overflow: 'hidden' }}>
+                          {renderMedia(product.image, '🍔')}
                         </div>
                         <div style={{ flex: 1 }}>
                           <h4 style={{ fontSize: '1.1rem', margin: '0 0 6px 0' }}>{product.name}</h4>
@@ -413,8 +419,8 @@ export default function CustomerDashboard() {
                         <div key={order.id} className="card" style={{ border: '2px solid var(--primary)', background: 'var(--bg-card)', padding: '0', overflow: 'hidden' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderBottom: '1px solid var(--border)', background: 'var(--primary-glow)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                              <div style={{ width: '48px', height: '48px', background: 'var(--bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
-                                {order.restaurant?.image}
+                              <div style={{ width: '48px', height: '48px', background: 'var(--bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', overflow: 'hidden' }}>
+                                {renderMedia(order.restaurant?.image, '🏪')}
                               </div>
                               <div>
                                 <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{order.restaurant?.name}</h3>
@@ -494,7 +500,9 @@ export default function CustomerDashboard() {
                     {pastOrders.map((order) => (
                       <div key={order.id} className="card" style={{ padding: '20px', opacity: 0.8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                          <div style={{ fontSize: '2rem', opacity: 0.5 }}>{order.restaurant?.image || '🍽️'}</div>
+                          <div style={{ fontSize: '2rem', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', overflow: 'hidden', opacity: 0.7 }}>
+                            {renderMedia(order.restaurant?.image, '🍽️')}
+                          </div>
                           <div>
                             <strong style={{ fontSize: '1.1rem', display: 'block', marginBottom: '4px' }}>{order.restaurant?.name || 'Restaurant'}</strong>
                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>

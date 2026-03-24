@@ -9,9 +9,9 @@ import { ChefHat, Clock, CheckCircle, Flame, User, Phone, CheckCircle2, Truck, P
 
 export default function RestaurantDashboard() {
   const { orders, fetchOrders, updateStatus } = useOrderStore();
-  const { products, fetchMenu, addProduct, deleteProduct } = useMenuStore();
+  const { products, restaurant, fetchMenu, updateRestaurant, addProduct, deleteProduct } = useMenuStore();
   
-  const [activeTab, setActiveTab] = useState<'orders' | 'menu'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'settings'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Plats', image: '🍽️' });
 
@@ -85,6 +85,21 @@ export default function RestaurantDashboard() {
             }}
           >
             🍔 Gestion du Menu
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            style={{ 
+              padding: '10px 24px', 
+              borderRadius: '8px', 
+              border: 'none', 
+              background: activeTab === 'settings' ? 'var(--primary)' : 'transparent',
+              color: activeTab === 'settings' ? '#fff' : 'var(--text-muted)',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            ⚙️ Paramètres
           </button>
         </div>
       </div>
@@ -268,8 +283,12 @@ export default function RestaurantDashboard() {
           <div className="grid grid-3">
             {products.map((product) => (
               <div key={product.id} className="card" style={{ padding: '0', overflow: 'hidden' }}>
-                <div style={{ height: '100px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>
-                  {product.image}
+                <div style={{ height: '150px', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', overflow: 'hidden' }}>
+                  {product.image?.startsWith('http') ? (
+                    <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span>{product.image}</span>
+                  )}
                 </div>
                 <div style={{ padding: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
@@ -322,8 +341,8 @@ export default function RestaurantDashboard() {
                     </div>
                   </div>
                   <div>
-                    <label>Emoji (Image)</label>
-                    <input type="text" className="input" placeholder="ex: 🍕" value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} />
+                    <label>URL de l'image (ou Emoji)</label>
+                    <input type="text" className="input" placeholder="ex: https://... ou 🍕" value={newProduct.image} onChange={e => setNewProduct({...newProduct, image: e.target.value})} />
                   </div>
                   <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                     <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowAddModal(false)}>Annuler</button>
@@ -333,6 +352,53 @@ export default function RestaurantDashboard() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* =========================================================
+          TAB: PARAMÈTRES (SETTINGS)
+          ========================================================= */}
+      {activeTab === 'settings' && restaurant && (
+        <div className="fade-in">
+          <h2 className="section-title">Paramètres du Restaurant</h2>
+          <div className="card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              await updateRestaurant({
+                name: formData.get('name') as string,
+                description: formData.get('description') as string,
+                address: formData.get('address') as string,
+                image: formData.get('image') as string,
+              });
+              alert('Paramètres mis à jour avec succès !');
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label>Nom du Restaurant</label>
+                <input name="name" type="text" className="input" defaultValue={restaurant.name} required />
+              </div>
+              <div>
+                <label>URL du Logo / Image de Couverture</label>
+                <input name="image" type="url" className="input" defaultValue={restaurant.image} placeholder="https://images.unsplash.com/..." />
+                {restaurant.image?.startsWith('http') && (
+                  <div style={{ marginTop: '12px', borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
+                    <img src={restaurant.image} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+              </div>
+              <div>
+                <label>Description (Slogan)</label>
+                <textarea name="description" className="input" defaultValue={restaurant.description} rows={3}></textarea>
+              </div>
+              <div>
+                <label>Adresse Complète</label>
+                <input name="address" type="text" className="input" defaultValue={restaurant.address} />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ marginTop: '10px' }}>
+                Enregistrer les modifications
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
