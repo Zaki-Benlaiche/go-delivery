@@ -143,10 +143,10 @@ export default function CustomerDashboard() {
         <div className="fade-in">
           
           {/* Awesome Banner */}
-          <div style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #ff6b81 100%)', borderRadius: '24px', padding: '40px', marginBottom: '48px', color: 'white', position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(255, 71, 87, 0.2)' }}>
+          <div style={{ background: 'linear-gradient(135deg, var(--primary) 0%, #ff6b81 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '36px', color: 'white', position: 'relative', overflow: 'hidden', boxShadow: '0 20px 40px rgba(255, 71, 87, 0.2)' }}>
             <div style={{ position: 'relative', zIndex: 2, maxWidth: '600px' }}>
-              <h1 style={{ fontSize: '2.5rem', marginBottom: '16px', fontWeight: 900, lineHeight: 1.1 }}>La faim n'attend pas.<br/>Nous non plus.</h1>
-              <p style={{ fontSize: '1.1rem', opacity: 0.9, marginBottom: '24px' }}>Faites-vous livrer vos plats préférés en moins de 30 minutes.</p>
+              <h1 style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', marginBottom: '12px', fontWeight: 900, lineHeight: 1.1 }}>La faim n'attend pas.<br/>Nous non plus.</h1>
+              <p style={{ fontSize: 'clamp(0.85rem, 2.5vw, 1.1rem)', opacity: 0.9, marginBottom: '20px' }}>Faites-vous livrer vos plats préférés en moins de 30 minutes.</p>
               
               <div style={{ display: 'flex', background: 'var(--bg-card)', padding: '8px', borderRadius: '16px', alignItems: 'center', width: '100%', maxWidth: '400px' }}>
                 <Search size={20} color="var(--text-muted)" style={{ marginLeft: '12px' }}/>
@@ -226,7 +226,7 @@ export default function CustomerDashboard() {
         <div className="fade-in">
           
           {/* Restaurant Header */}
-          <div style={{ position: 'relative', height: '240px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: '24px', marginBottom: '40px', display: 'flex', alignItems: 'center', padding: '40px', overflow: 'hidden' }}>
+          <div style={{ position: 'relative', minHeight: '180px', background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', borderRadius: '20px', marginBottom: '32px', display: 'flex', alignItems: 'center', padding: '24px', overflow: 'hidden' }}>
             <button 
               className="btn btn-secondary" 
               onClick={() => { setSelectedRestaurant(null); loadRestaurants(); }} 
@@ -239,12 +239,12 @@ export default function CustomerDashboard() {
               <span>{selectedRestaurant.image?.startsWith('http') ? '🍽️' : selectedRestaurant.image}</span>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '32px', zIndex: 10 }}>
-              <div style={{ fontSize: '5rem', background: 'var(--bg-card)', width: '120px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', zIndex: 10, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '3rem', background: 'var(--bg-card)', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', overflow: 'hidden', flexShrink: 0 }}>
                 {renderMedia(selectedRestaurant.image)}
               </div>
               <div style={{ color: 'white' }}>
-                <h1 style={{ fontSize: '2.5rem', marginBottom: '8px', fontWeight: 900 }}>{selectedRestaurant.name}</h1>
+                <h1 style={{ fontSize: 'clamp(1.3rem, 4vw, 2.5rem)', marginBottom: '8px', fontWeight: 900 }}>{selectedRestaurant.name}</h1>
                 <p style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.9, fontSize: '1.1rem', marginBottom: '16px' }}>
                   <MapPin size={16} /> {selectedRestaurant.address}
                   <span style={{ margin: '0 8px', opacity: 0.3 }}>|</span>
@@ -258,7 +258,7 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: '1fr 380px', gap: '40px', alignItems: 'start' }}>
+          <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 340px)', gap: '32px', alignItems: 'start' }}>
             
             {/* Menu Section */}
             <div>

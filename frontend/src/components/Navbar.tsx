@@ -41,7 +41,7 @@ export default function Navbar() {
 
         {/* Role-specific contextual info in Navbar */}
         {user.role === 'client' && (
-           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-elevated)', padding: '8px 16px', borderRadius: '30px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+           <div className="nav-location" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-elevated)', padding: '8px 16px', borderRadius: '30px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
              <MapPin size={14} /> Livraison vers: <strong>Alger Centre</strong>
            </div>
         )}
@@ -51,7 +51,7 @@ export default function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         
         {/* Universal Actions */}
-        <div style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)' }}>
+        <div className="nav-actions" style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)' }}>
           <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><Search size={20} /></button>
           <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', position: 'relative' }}>
             <Bell size={20} />
@@ -63,18 +63,7 @@ export default function Navbar() {
 
         {/* User Profile Dropdown Handle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <strong style={{ fontSize: '0.9rem', lineHeight: 1.2 }}>{user.name}</strong>
-            <span style={{ 
-              fontSize: '0.75rem', 
-              color: user.role === 'restaurant' ? 'var(--info)' : user.role === 'driver' ? 'var(--accent)' : 'var(--primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              fontWeight: 700
-            }}>
-              {user.role}
-            </span>
-          </div>
+            <span className="nav-username" style={{ fontSize: '0.9rem', lineHeight: 1.2 }}><strong>{user.name}</strong></span>
           <div style={{ 
             width: '40px', 
             height: '40px', 

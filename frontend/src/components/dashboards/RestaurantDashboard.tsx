@@ -61,12 +61,12 @@ export default function RestaurantDashboard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">👨‍🍳 Portail Restaurant</h1>
           <p className="page-subtitle">Gérez vos commandes et votre menu en temps réel</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-elevated)', padding: '6px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', background: 'var(--bg-elevated)', padding: '6px', borderRadius: '12px', overflowX: 'auto', maxWidth: '100%' }}>
           <button 
             onClick={() => setActiveTab('orders')}
             style={{ 

@@ -18,7 +18,7 @@ export default function DriverDashboard() {
   return (
     <div className="fade-in">
       {/* Header Section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title" style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '8px' }}>🚀 Espace Courrier</h1>
           <p className="page-subtitle" style={{ fontSize: '1.1rem', opacity: 0.7 }}>Prêt pour la prochaine course ? Le client vous attend.</p>
@@ -59,7 +59,7 @@ export default function DriverDashboard() {
                    </div>
                 </div>
 
-                <div style={{ padding: '32px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '40px' }}>
+                <div style={{ padding: '32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '32px' }}>
                   {/* Step A: Store */}
                   <div style={{ display: 'flex', gap: '20px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
@@ -121,7 +121,7 @@ export default function DriverDashboard() {
       )}
 
       {/* 2. Main Grid: Available & History */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '40px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
         
         {/* Available Deliveries */}
         <div>
