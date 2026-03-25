@@ -16,7 +16,11 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email already registered.' });
     }
 
-    const user = await User.create({ name, email, password, role: role || 'client', phone: phone || '' });
+    // Block admin registration from public API
+    const allowedRoles = ['client', 'restaurant', 'driver'];
+    const safeRole = allowedRoles.includes(role) ? role : 'client';
+
+    const user = await User.create({ name, email, password, role: safeRole, phone: phone || '' });
 
     // If registering as restaurant, create a restaurant entry
     if (role === 'restaurant') {

@@ -55,3 +55,30 @@ exports.getAllOrders = async (req, res) => {
     res.status(500).json({ message: 'Error fetching orders', error: err.message });
   }
 };
+
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    const validRoles = ['client', 'restaurant', 'driver', 'admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role.' });
+    }
+
+    // Prevent admin from changing their own role
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ message: 'You cannot change your own role.' });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    user.role = role;
+    await user.save();
+
+    res.json({ message: `User ${user.name} is now ${role}.`, user: { id: user.id, name: user.name, role: user.role } });
+  } catch (err) {
+    res.status(500).json({ message: 'Error updating role', error: err.message });
+  }
+};

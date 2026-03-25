@@ -53,6 +53,29 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
+  const handleRoleChange = async (userId: number, currentRole: string) => {
+    const newRole = currentRole === 'admin' ? 'client' : 'admin';
+    const confirmMessage = newRole === 'admin' 
+      ? 'Voulez-vous vraiment donner les droits administrateur à cet utilisateur ?' 
+      : 'Voulez-vous vraiment retirer les droits administrateur de cet utilisateur ?';
+      
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await api.put(`/admin/users/${userId}/role`, 
+        { role: newRole }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Update local state
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      alert(`Le rôle a été mis à jour avec succès : ${newRole}`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors de la mise à jour du rôle');
+    }
+  };
+
   if (loading) return <div className="empty-state">Chargement de la console d'administration...</div>;
 
   return (
@@ -175,7 +198,15 @@ export default function AdminDashboard() {
                       {user.role}
                     </span>
                   </td>
-                  <td style={{ padding: '16px 24px' }}><button className="btn btn-sm btn-secondary">Modifier</button></td>
+                  <td style={{ padding: '16px 24px' }}>
+                    <button 
+                      className={`btn btn-sm ${user.role === 'admin' ? 'btn-secondary' : 'btn-primary'}`}
+                      onClick={() => handleRoleChange(user.id, user.role)}
+                      style={{ padding: '6px 12px', fontSize: '0.75rem' }}
+                    >
+                      {user.role === 'admin' ? 'Retirer Admin' : 'Rendre Admin'}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {activeTab === 'restaurants' && restaurants.map(rest => (
