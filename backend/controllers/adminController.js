@@ -5,7 +5,7 @@ exports.getStats = async (req, res) => {
     const userCount = await User.count();
     const restaurantCount = await Restaurant.count();
     const orderCount = await Order.count();
-    const totalRevenue = await Order.sum('totalPrice') || 0;
+    const totalRevenue = await Order.sum('total') || 0;
 
     res.json({
       users: userCount,
@@ -44,7 +44,7 @@ exports.getAllOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
       include: [
-        { model: User, as: 'client', attributes: ['name'] },
+        { model: User, as: 'customer', attributes: ['name'] },
         { model: Restaurant, as: 'restaurant', attributes: ['name'] },
         { model: User, as: 'driver', attributes: ['name'] }
       ],

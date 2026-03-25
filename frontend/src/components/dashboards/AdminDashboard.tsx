@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { 
   Users, 
   Store, 
@@ -32,14 +32,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const headers = { Authorization: `Bearer ${token}` };
-        
         const [statsRes, usersRes, restRes, ordersRes] = await Promise.all([
-          axios.get('http://localhost:3001/api/admin/stats', { headers }),
-          axios.get('http://localhost:3001/api/admin/users', { headers }),
-          axios.get('http://localhost:3001/api/admin/restaurants', { headers }),
-          axios.get('http://localhost:3001/api/admin/orders', { headers }),
+          api.get('/admin/stats'),
+          api.get('/admin/users'),
+          api.get('/admin/restaurants'),
+          api.get('/admin/orders'),
         ]);
 
         setStats(statsRes.data);
@@ -193,9 +190,9 @@ export default function AdminDashboard() {
               {activeTab === 'orders' && orders.map(order => (
                 <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '16px 24px', fontSize: '0.9rem' }}>#{order.id}</td>
-                  <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 600 }}>{order.client?.name}</td>
+                  <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 600 }}>{order.customer?.name}</td>
                   <td style={{ padding: '16px 24px', fontSize: '0.9rem' }}>{order.restaurant?.name}</td>
-                  <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent)' }}>{order.totalPrice} DZD</td>
+                  <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent)' }}>{order.total} DZD</td>
                   <td style={{ padding: '16px 24px' }}><StatusBadge status={order.status} /></td>
                   <td style={{ padding: '16px 24px' }}><button className="btn btn-sm btn-secondary">Détails</button></td>
                 </tr>
