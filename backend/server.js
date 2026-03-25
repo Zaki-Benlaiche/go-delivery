@@ -7,6 +7,7 @@ require('dotenv').config();
 const { sequelize, User, Restaurant, Product } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const restaurantRoutes = require('./routes/restaurantRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/orders', require('./routes/orderRoutes')(io));
+app.use('/api/admin', adminRoutes);
 
 // Socket.io
 io.on('connection', (socket) => {
@@ -36,6 +38,9 @@ const seedDatabase = async () => {
   if (userCount > 0) return;
 
   console.log('🌱 Seeding database...');
+
+  // Create admin user
+  await User.create({ name: 'Admin Go', email: 'admin@go.com', password: 'password123', role: 'admin', phone: '0555555555' });
 
   // Create restaurant owners
   const owner1 = await User.create({ name: 'Ahmed Pizzeria', email: 'pizza@go.com', password: 'password123', role: 'restaurant', phone: '0550000001' });

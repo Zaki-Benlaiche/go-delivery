@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import CustomerDashboard from '@/components/dashboards/CustomerDashboard';
 import RestaurantDashboard from '@/components/dashboards/RestaurantDashboard';
 import DriverDashboard from '@/components/dashboards/DriverDashboard';
+import AdminDashboard from '@/components/dashboards/AdminDashboard';
 import { useOrderStore } from '@/store/orderStore';
 
 export default function Home() {
@@ -43,6 +44,7 @@ export default function Home() {
         {user.role === 'client' && <CustomerDashboard />}
         {user.role === 'restaurant' && <RestaurantDashboard />}
         {user.role === 'driver' && <DriverDashboard />}
+        {user.role === 'admin' && <AdminDashboard />}
       </div>
     </div>
   );
