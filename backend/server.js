@@ -32,46 +32,76 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log(`❌ Client disconnected: ${socket.id}`));
 });
 
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error(`❌ Error: ${err.message}`);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.stack : {}
+  });
+});
+
 // Seed Data for Development
 const seedDatabase = async () => {
-  const userCount = await User.count();
-  if (userCount > 0) return;
+  try {
+    const userCount = await User.count();
+    const restaurantCount = await Restaurant.count();
+    
+    if (userCount > 0 && restaurantCount > 0) {
+      console.log('✅ Database already seeded.');
+      return;
+    }
 
-  console.log('🌱 Seeding database...');
+    console.log('🌱 Seeding database...');
 
-  // Create admin user
-  await User.create({ name: 'Admin Go', email: 'admin@go.com', password: 'password123', role: 'admin', phone: '0555555555' });
+    // Create admin user if not exists
+    const admin = await User.findOne({ where: { role: 'admin' } });
+    if (!admin) {
+      await User.create({ name: 'Admin Go', email: 'admin@go.com', password: 'password123', role: 'admin', phone: '0555555555' });
+    }
 
-  // Create restaurant owners
-  const owner1 = await User.create({ name: 'Ahmed Pizzeria', email: 'pizza@go.com', password: 'password123', role: 'restaurant', phone: '0550000001' });
-  const owner2 = await User.create({ name: 'Karim Burger', email: 'burger@go.com', password: 'password123', role: 'restaurant', phone: '0550000002' });
-  const owner3 = await User.create({ name: 'Youcef Tacos', email: 'tacos@go.com', password: 'password123', role: 'restaurant', phone: '0550000003' });
+    // Create restaurant owners if not exists
+    const owners = await User.findAll({ where: { role: 'restaurant' } });
+    if (owners.length === 0) {
+      const owner1 = await User.create({ name: 'Ahmed Pizzeria', email: 'pizza@go.com', password: 'password123', role: 'restaurant', phone: '0550000001' });
+      const owner2 = await User.create({ name: 'Karim Burger', email: 'burger@go.com', password: 'password123', role: 'restaurant', phone: '0550000002' });
+      const owner3 = await User.create({ name: 'Youcef Tacos', email: 'tacos@go.com', password: 'password123', role: 'restaurant', phone: '0550000003' });
 
-  // Create restaurants
-  const r1 = await Restaurant.create({ name: 'Pizza Palace', description: 'Best pizza in town!', image: '🍕', address: 'Rue Didouche Mourad, Algiers', userId: owner1.id });
-  const r2 = await Restaurant.create({ name: 'Burger Empire', description: 'Premium burgers & fries', image: '🍔', address: 'Boulevard Hassan, Oran', userId: owner2.id });
-  const r3 = await Restaurant.create({ name: 'Tacos El Rey', description: 'Authentic tacos & wraps', image: '🌮', address: 'Centre Ville, Constantine', userId: owner3.id });
+      // Create restaurants
+      const r1 = await Restaurant.create({ name: 'Pizza Palace', description: 'Best pizza in town!', image: '🍕', address: 'Rue Didouche Mourad, Algiers', userId: owner1.id });
+      const r2 = await Restaurant.create({ name: 'Burger Empire', description: 'Premium burgers & fries', image: '🍔', address: 'Boulevard Hassan, Oran', userId: owner2.id });
+      const r3 = await Restaurant.create({ name: 'Tacos El Rey', description: 'Authentic tacos & wraps', image: '🌮', address: 'Centre Ville, Constantine', userId: owner3.id });
 
-  // Create products
-  await Product.bulkCreate([
-    { name: 'Margherita', price: 800, category: 'Pizza', restaurantId: r1.id, image: '🍕' },
-    { name: 'Pepperoni', price: 1000, category: 'Pizza', restaurantId: r1.id, image: '🍕' },
-    { name: 'Four Cheese', price: 1200, category: 'Pizza', restaurantId: r1.id, image: '🧀' },
-    { name: 'Classic Burger', price: 600, category: 'Burger', restaurantId: r2.id, image: '🍔' },
-    { name: 'Double Cheese', price: 900, category: 'Burger', restaurantId: r2.id, image: '🍔' },
-    { name: 'Chicken Wings', price: 700, category: 'Sides', restaurantId: r2.id, image: '🍗' },
-    { name: 'Beef Tacos', price: 500, category: 'Tacos', restaurantId: r3.id, image: '🌮' },
-    { name: 'Chicken Wrap', price: 550, category: 'Wrap', restaurantId: r3.id, image: '🌯' },
-    { name: 'Nachos Supreme', price: 650, category: 'Sides', restaurantId: r3.id, image: '🧀' },
-  ]);
+      // Create products
+      await Product.bulkCreate([
+        { name: 'Margherita', price: 800, category: 'Pizza', restaurantId: r1.id, image: '🍕' },
+        { name: 'Pepperoni', price: 1000, category: 'Pizza', restaurantId: r1.id, image: '🍕' },
+        { name: 'Four Cheese', price: 1200, category: 'Pizza', restaurantId: r1.id, image: '🧀' },
+        { name: 'Classic Burger', price: 600, category: 'Burger', restaurantId: r2.id, image: '🍔' },
+        { name: 'Double Cheese', price: 900, category: 'Burger', restaurantId: r2.id, image: '🍔' },
+        { name: 'Chicken Wings', price: 700, category: 'Sides', restaurantId: r2.id, image: '🍗' },
+        { name: 'Beef Tacos', price: 500, category: 'Tacos', restaurantId: r3.id, image: '🌮' },
+        { name: 'Chicken Wrap', price: 550, category: 'Wrap', restaurantId: r3.id, image: '🌯' },
+        { name: 'Nachos Supreme', price: 650, category: 'Sides', restaurantId: r3.id, image: '🧀' },
+      ]);
+    }
 
-  // Create a test client
-  await User.create({ name: 'Client Test', email: 'client@go.com', password: 'password123', role: 'client', phone: '0660000001' });
+    // Create test client if not exists
+    const client = await User.findOne({ where: { role: 'client' } });
+    if (!client) {
+      await User.create({ name: 'Client Test', email: 'client@go.com', password: 'password123', role: 'client', phone: '0660000001' });
+    }
 
-  // Create a test driver
-  await User.create({ name: 'Driver Mohamed', email: 'driver@go.com', password: 'password123', role: 'driver', phone: '0770000001' });
+    // Create test driver if not exists
+    const driver = await User.findOne({ where: { role: 'driver' } });
+    if (!driver) {
+      await User.create({ name: 'Driver Mohamed', email: 'driver@go.com', password: 'password123', role: 'driver', phone: '0770000001' });
+    }
 
-  console.log('✅ Seed data created successfully!');
+    console.log('✅ Seed data check/creation successfully!');
+  } catch (error) {
+    console.error('❌ Seeding error:', error);
+  }
 };
 
 // Start Server
@@ -82,4 +112,7 @@ sequelize.sync({ force: false }).then(async () => {
   server.listen(PORT, () => {
     console.log(`🚀 GO-DELIVERY Backend running on http://localhost:${PORT}`);
   });
+}).catch(err => {
+  console.error('❌ Failed to sync database:', err);
 });
+

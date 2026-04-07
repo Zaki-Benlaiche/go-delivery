@@ -4,11 +4,23 @@ exports.createOrder = async (req, res, io) => {
   try {
     const { restaurantId, items, deliveryAddress } = req.body;
 
+    // Validate restaurant
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found.' });
+    }
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Order must have at least one item.' });
+    }
+
     // Calculate total
     let total = 0;
     for (const item of items) {
       const product = await Product.findByPk(item.productId);
-      if (product) total += product.price * item.quantity;
+      if (product) {
+        total += product.price * item.quantity;
+      }
     }
 
     const order = await Order.create({
@@ -22,12 +34,14 @@ exports.createOrder = async (req, res, io) => {
     // Create order items
     for (const item of items) {
       const product = await Product.findByPk(item.productId);
-      await OrderItem.create({
-        orderId: order.id,
-        productId: item.productId,
-        quantity: item.quantity,
-        price: product.price,
-      });
+      if (product) {
+        await OrderItem.create({
+          orderId: order.id,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: product.price,
+        });
+      }
     }
 
     // Fetch complete order with relations
@@ -44,6 +58,7 @@ exports.createOrder = async (req, res, io) => {
 
     res.status(201).json(fullOrder);
   } catch (err) {
+    console.error('❌ CreateOrder error:', err);
     res.status(500).json({ message: 'Server error.', error: err.message });
   }
 };
@@ -56,7 +71,11 @@ exports.getOrders = async (req, res) => {
     if (role === 'client') where = { customerId: id };
     if (role === 'restaurant') {
       const rest = await Restaurant.findOne({ where: { userId: id } });
-      if (rest) where = { restaurantId: rest.id };
+      if (rest) {
+        where = { restaurantId: rest.id };
+      } else {
+        return res.json([]); // No restaurant yet
+      }
     }
     if (role === 'driver') where = { driverId: id };
 
@@ -73,6 +92,7 @@ exports.getOrders = async (req, res) => {
 
     res.json(orders);
   } catch (err) {
+    console.error('❌ GetOrders error:', err);
     res.status(500).json({ message: 'Server error.', error: err.message });
   }
 };
@@ -89,6 +109,7 @@ exports.getAvailableOrders = async (req, res) => {
     });
     res.json(orders);
   } catch (err) {
+    console.error('❌ GetAvailableOrders error:', err);
     res.status(500).json({ message: 'Server error.', error: err.message });
   }
 };
@@ -101,8 +122,11 @@ exports.updateOrderStatus = async (req, res, io) => {
     const order = await Order.findByPk(id);
     if (!order) return res.status(404).json({ message: 'Order not found.' });
 
-    // If driver accepts delivery
+    // Race condition prevention for drivers
     if (status === 'out_for_delivery' && req.user.role === 'driver') {
+      if (order.driverId && order.driverId !== req.user.id) {
+        return res.status(409).json({ message: 'Order already accepted by another driver.' });
+      }
       order.driverId = req.user.id;
     }
 
@@ -129,6 +153,8 @@ exports.updateOrderStatus = async (req, res, io) => {
 
     res.json(fullOrder);
   } catch (err) {
+    console.error('❌ UpdateOrderStatus error:', err);
     res.status(500).json({ message: 'Server error.', error: err.message });
   }
 };
+

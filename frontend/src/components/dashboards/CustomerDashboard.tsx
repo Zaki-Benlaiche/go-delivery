@@ -5,7 +5,7 @@ import { useOrderStore } from '@/store/orderStore';
 import StatusBadge from '@/components/StatusBadge';
 import api from '@/lib/api';
 import type { Restaurant, Product, OrderStatus } from '@/types';
-import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, Star, ChevronLeft, Navigation, Phone, ChefHat, User } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, Star, ChevronLeft, Navigation, Phone, ChefHat, User, X, ShoppingCart } from 'lucide-react';
 
 export default function CustomerDashboard() {
   const { orders, fetchOrders, createOrder } = useOrderStore();
@@ -15,6 +15,7 @@ export default function CustomerDashboard() {
   const [isOrdering, setIsOrdering] = useState(false);
   const [activeTab, setActiveTab] = useState<'explore' | 'orders'>('explore');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   const renderMedia = (imageStr: string | undefined, defaultEmoji = '🍽️') => {
     if (!imageStr) return <span>{defaultEmoji}</span>;
@@ -79,7 +80,87 @@ export default function CustomerDashboard() {
     return sum + (cart[p.id] || 0) * p.price;
   }, 0) || 0;
 
+  const totalItemsCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+
   const filteredRestaurants = restaurants.filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.address.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // Render the Cart UI which is used in 2 places (Desktop sidebar & Mobile bottom sheet)
+  const renderCartContent = (isMobile: boolean) => (
+    <div className={!isMobile ? "card" : ""} style={{ padding: isMobile ? 0 : '24px', boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.3)', border: isMobile ? 'none' : '1px solid rgba(255,71,87,0.2)' }}>
+      <h3 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', fontSize: '1.3rem', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <ShoppingBag size={20} color="var(--primary)" /> Votre Commande
+        </span>
+        {isMobile && (
+          <button onClick={() => setIsMobileCartOpen(false)} style={{ background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-muted)', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <X size={20} />
+          </button>
+        )}
+      </h3>
+      
+      {Object.keys(cart).length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+          <div style={{ width: '80px', height: '80px', background: 'var(--bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Package size={32} style={{ opacity: 0.3 }} />
+          </div>
+          <p style={{ fontWeight: 600 }}>Le panier est vide</p>
+          <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Ajoutez des plats pour commencer.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{ maxHeight: isMobile ? '40vh' : '350px', overflowY: 'auto', marginBottom: '24px', paddingRight: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {Object.entries(cart).map(([productId, quantity]) => {
+              const product = selectedRestaurant?.products?.find(p => p.id === Number(productId));
+              if (!product) return null;
+              return (
+                <div key={productId} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', fontWeight: 700, fontSize: '0.9rem' }}>
+                    {quantity}x
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{product.name}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700 }}>{product.price * quantity} DA</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          <div style={{ background: 'var(--bg-card)', padding: isMobile ? 0 : '16px', borderRadius: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <span>Sous-total</span>
+              <span>{cartTotal} DA</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              <span>Frais de livraison</span>
+              <span>200 DA</span>
+            </div>
+            <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}>
+              <span style={{ fontWeight: 600 }}>Total</span>
+              <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{cartTotal + 200} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>DA</span></span>
+            </div>
+          </div>
+          
+          <div style={{ background: 'var(--info)20', color: '#1e90ff', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', gap: '8px', marginBottom: '24px' }}>
+            <Info size={16} style={{ flexShrink: 0 }} />
+            Paiement en espèces à la livraison.
+          </div>
+
+          <button 
+            className="btn btn-primary btn-block" 
+            onClick={() => {
+              handleOrder();
+              if (isMobile) setIsMobileCartOpen(false);
+            }}
+            disabled={isOrdering}
+            style={{ fontSize: '1.1rem', padding: '16px', borderRadius: '12px', boxShadow: '0 10px 20px rgba(255,71,87,0.3)' }}
+          >
+            {isOrdering ? 'Traitement...' : `Commander (${cartTotal + 200} DA)`}
+          </button>
+        </>
+      )}
+    </div>
+  );
 
   // Active / History separation
   const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled');
@@ -258,7 +339,7 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 340px)', gap: '32px', alignItems: 'start' }}>
+          <div className="customer-layout">
             
             {/* Menu Section */}
             <div>
@@ -309,75 +390,32 @@ export default function CustomerDashboard() {
               )}
             </div>
 
-            {/* Premium Sticky Cart */}
-            <div style={{ position: 'sticky', top: '100px' }}>
-              <div className="card" style={{ padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '1px solid rgba(255,71,87,0.2)' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', fontSize: '1.3rem', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
-                  <ShoppingBag size={20} color="var(--primary)" /> 
-                  Votre Commande
-                </h3>
-                
-                {Object.keys(cart).length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-                    <div style={{ width: '80px', height: '80px', background: 'var(--bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                      <Package size={32} style={{ opacity: 0.3 }} />
-                    </div>
-                    <p style={{ fontWeight: 600 }}>Le panier est vide</p>
-                    <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Ajoutez des plats pour commencer.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ maxHeight: '350px', overflowY: 'auto', marginBottom: '24px', paddingRight: '8px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {Object.entries(cart).map(([productId, quantity]) => {
-                        const product = selectedRestaurant.products?.find(p => p.id === Number(productId));
-                        if (!product) return null;
-                        return (
-                          <div key={productId} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', fontWeight: 700, fontSize: '0.9rem' }}>
-                              {quantity}x
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{product.name}</div>
-                              <div style={{ fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700 }}>{product.price * quantity} DA</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    <div style={{ background: 'var(--bg-card)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        <span>Sous-total</span>
-                        <span>{cartTotal} DA</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        <span>Frais de livraison</span>
-                        <span>200 DA</span>
-                      </div>
-                      <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}>
-                        <span style={{ fontWeight: 600 }}>Total</span>
-                        <span style={{ fontSize: '1.8rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>{cartTotal + 200} <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>DA</span></span>
-                      </div>
-                    </div>
-                    
-                    <div style={{ background: 'var(--info)20', color: '#1e90ff', padding: '12px', borderRadius: '8px', fontSize: '0.85rem', display: 'flex', gap: '8px', marginBottom: '24px' }}>
-                      <Info size={16} style={{ flexShrink: 0 }} />
-                      Paiement en espèces à la livraison.
-                    </div>
-
-                    <button 
-                      className="btn btn-primary btn-block" 
-                      onClick={handleOrder}
-                      disabled={isOrdering}
-                      style={{ fontSize: '1.1rem', padding: '16px', borderRadius: '12px', boxShadow: '0 10px 20px rgba(255,71,87,0.3)' }}
-                    >
-                      {isOrdering ? 'Traitement...' : `Commander (${cartTotal + 200} DA)`}
-                    </button>
-                  </>
-                )}
-              </div>
+            <div className="desktop-cart">
+              {renderCartContent(false)}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Floating Action Bar for Mobile Cart */}
+      {activeTab === 'explore' && selectedRestaurant && totalItemsCount > 0 && (
+        <div className="mobile-cart-bar" onClick={() => setIsMobileCartOpen(true)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.25)', padding: '6px 12px', borderRadius: '50%', fontWeight: 800, fontSize: '0.9rem', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {totalItemsCount}
+            </div>
+            <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>Voir le panier</span>
+          </div>
+          <span style={{ fontWeight: 900, fontSize: '1.2rem' }}>{cartTotal + 200} DA</span>
+        </div>
+      )}
+
+      {/* Full Screen Overlay / Bottom Sheet for Mobile Cart */}
+      {isMobileCartOpen && (
+        <div className="mobile-cart-overlay" onClick={() => setIsMobileCartOpen(false)}>
+          <div className="mobile-cart-sheet" onClick={(e) => e.stopPropagation()}>
+            {renderCartContent(true)}
           </div>
         </div>
       )}
