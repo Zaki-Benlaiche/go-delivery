@@ -50,6 +50,23 @@ export default function Navbar() {
       {/* Utilities & Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
         
+        {/* Download App Link */}
+        <a href="/download" style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          color: 'var(--text-muted)', 
+          textDecoration: 'none',
+          fontSize: '0.9rem',
+          fontWeight: 600,
+          background: 'rgba(255, 255, 255, 0.05)',
+          padding: '6px 12px',
+          borderRadius: '20px',
+          transition: 'all 0.2s ease'
+        }}>
+          📱 تنزيل التطبيق
+        </a>
+
         {/* Universal Actions */}
         <div className="nav-actions" style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)' }}>
           <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}><Search size={20} /></button>
