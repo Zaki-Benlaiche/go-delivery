@@ -64,6 +64,7 @@ export default function AuthPage() {
                   <option value="client">Client</option>
                   <option value="restaurant">Restaurant</option>
                   <option value="driver">Livreur</option>
+                  <option value="place">Établissement (Médecin, Poste...)</option>
                 </select>
               </div>
               <div className="form-group">

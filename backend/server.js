@@ -100,15 +100,23 @@ const seedDatabase = async () => {
       await User.create({ name: 'Driver Mohamed', email: 'driver@go.com', password: 'password123', role: 'driver', phone: '0770000001' });
     }
 
-    // Seed Places for Reservation Feature
+    // Seed Places + Place Owner Accounts for Reservation Feature
     const placeCount = await Place.count();
     if (placeCount === 0) {
+      // Create place owner accounts
+      const drKarim = await User.create({ name: 'Dr. Karim', email: 'drkarim@go.com', password: 'password123', role: 'place', phone: '0555100001' });
+      const drSarah = await User.create({ name: 'Dr. Sarah', email: 'drsarah@go.com', password: 'password123', role: 'place', phone: '0555100002' });
+      const clinique = await User.create({ name: 'Clinique El Shifa', email: 'clinique@go.com', password: 'password123', role: 'place', phone: '0555100003' });
+      const apc = await User.create({ name: 'APC Mairie', email: 'apc@go.com', password: 'password123', role: 'place', phone: '0555100004' });
+      const poste = await User.create({ name: 'Algérie Poste', email: 'poste@go.com', password: 'password123', role: 'place', phone: '0555100005' });
+
+      // Create places linked to owners
       await Place.bulkCreate([
-        { name: 'Dr. Karim - Cardiologue', type: 'doctor', address: 'Centre Ville', description: 'Consultation sur rendez-vous et file d\'attente', icon: '🩺' },
-        { name: 'Dr. Sarah - Dentiste', type: 'doctor', address: 'El Kodia', description: 'Soins dentaires professionnels', icon: '🦷' },
-        { name: 'Clinique El Shifa', type: 'clinic', address: 'Route Nationale', description: 'Urgences et consultations générales', icon: '🏥' },
-        { name: 'APC - Mairie (Etat Civil)', type: 'government', address: 'Place Centrale', description: 'Retrait de documents administratifs', icon: '🏢' },
-        { name: 'Algérie Poste', type: 'other', address: 'Boulevard Principal', description: 'Retrait et versement', icon: '📮' },
+        { name: 'Dr. Karim - Cardiologue', type: 'doctor', address: 'Centre Ville', description: 'Consultation cardiologie', icon: '🩺', userId: drKarim.id },
+        { name: 'Dr. Sarah - Dentiste', type: 'doctor', address: 'El Kodia', description: 'Soins dentaires', icon: '🦷', userId: drSarah.id },
+        { name: 'Clinique El Shifa', type: 'clinic', address: 'Route Nationale', description: 'Urgences et consultations', icon: '🏥', userId: clinique.id },
+        { name: 'APC - Mairie (Etat Civil)', type: 'government', address: 'Place Centrale', description: 'Documents administratifs', icon: '🏢', userId: apc.id },
+        { name: 'Algérie Poste', type: 'other', address: 'Boulevard Principal', description: 'Retrait et versement', icon: '📮', userId: poste.id },
       ]);
     }
 

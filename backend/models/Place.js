@@ -24,6 +24,10 @@ const Place = sequelize.define('Place', {
     },
     icon: {
         type: DataTypes.STRING,
+    },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
     }
 });
 

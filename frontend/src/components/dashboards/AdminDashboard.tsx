@@ -2,15 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { 
-  Users, 
-  Store, 
-  ShoppingBag, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Users,
+  Store,
+  ShoppingBag,
+  DollarSign,
+  TrendingUp,
   ShieldCheck,
   Search,
-  ArrowRight
+  ArrowRight,
+  ClipboardList,
+  Phone,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import StatusBadge from '../StatusBadge';
 
@@ -26,23 +30,26 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'users' | 'restaurants' | 'orders'>('users');
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'users' | 'restaurants' | 'orders' | 'reservations'>('users');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, usersRes, restRes, ordersRes] = await Promise.all([
+        const [statsRes, usersRes, restRes, ordersRes, reservRes] = await Promise.all([
           api.get('/admin/stats'),
           api.get('/admin/users'),
           api.get('/admin/restaurants'),
           api.get('/admin/orders'),
+          api.get('/reservations/all'),
         ]);
 
         setStats(statsRes.data);
         setUsers(usersRes.data);
         setRestaurants(restRes.data);
         setOrders(ordersRes.data);
+        setReservations(reservRes.data);
       } catch (err) {
         console.error('Error fetching admin data:', err);
       } finally {
@@ -55,24 +62,33 @@ export default function AdminDashboard() {
 
   const handleRoleChange = async (userId: number, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'client' : 'admin';
-    const confirmMessage = newRole === 'admin' 
-      ? 'Voulez-vous vraiment donner les droits administrateur à cet utilisateur ?' 
+    const confirmMessage = newRole === 'admin'
+      ? 'Voulez-vous vraiment donner les droits administrateur à cet utilisateur ?'
       : 'Voulez-vous vraiment retirer les droits administrateur de cet utilisateur ?';
-      
+
     if (!window.confirm(confirmMessage)) return;
 
     try {
       const token = localStorage.getItem('token');
-      await api.put(`/admin/users/${userId}/role`, 
-        { role: newRole }, 
+      await api.put(`/admin/users/${userId}/role`,
+        { role: newRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       // Update local state
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
       alert(`Le rôle a été mis à jour avec succès : ${newRole}`);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erreur lors de la mise à jour du rôle');
+    }
+  };
+
+  const handleReservationStatus = async (id: number, status: string) => {
+    try {
+      await api.put(`/reservations/${id}/status`, { status });
+      setReservations(reservations.map(r => r.id === id ? { ...r, status } : r));
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur');
     }
   };
 
@@ -123,35 +139,41 @@ export default function AdminDashboard() {
 
       {/* TABS */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-        <button 
+        <button
           className={`btn ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('users')}
         >
           <Users size={18} /> Utilisateurs
         </button>
-        <button 
+        <button
           className={`btn ${activeTab === 'restaurants' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('restaurants')}
         >
           <Store size={18} /> Restaurants
         </button>
-        <button 
+        <button
           className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => setActiveTab('orders')}
         >
           <ShoppingBag size={18} /> Commandes
+        </button>
+        <button
+          className={`btn ${activeTab === 'reservations' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setActiveTab('reservations')}
+        >
+          <ClipboardList size={18} /> Réservations
         </button>
       </div>
 
       {/* CONTENT TABLES */}
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ textTransform: 'capitalize' }}>Liste des {activeTab === 'orders' ? 'commandes' : activeTab}</h3>
+          <h3 style={{ textTransform: 'capitalize' }}>Liste des {activeTab === 'orders' ? 'commandes' : activeTab === 'reservations' ? 'réservations' : activeTab}</h3>
           <div style={{ position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input 
-              type="text" 
-              placeholder="Rechercher..." 
+            <input
+              type="text"
+              placeholder="Rechercher..."
               style={{ padding: '8px 12px 8px 38px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text)', fontSize: '0.85rem' }}
             />
           </div>
@@ -184,6 +206,14 @@ export default function AdminDashboard() {
                     <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Statut</th>
                   </>
                 )}
+                {activeTab === 'reservations' && (
+                  <>
+                    <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Client</th>
+                    <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Lieu</th>
+                    <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>N° File</th>
+                    <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Statut</th>
+                  </>
+                )}
                 <th style={{ padding: '16px 24px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Action</th>
               </tr>
             </thead>
@@ -199,7 +229,7 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td style={{ padding: '16px 24px' }}>
-                    <button 
+                    <button
                       className={`btn btn-sm ${user.role === 'admin' ? 'btn-secondary' : 'btn-primary'}`}
                       onClick={() => handleRoleChange(user.id, user.role)}
                       style={{ padding: '6px 12px', fontSize: '0.75rem' }}
@@ -226,6 +256,41 @@ export default function AdminDashboard() {
                   <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent)' }}>{order.total} DZD</td>
                   <td style={{ padding: '16px 24px' }}><StatusBadge status={order.status} /></td>
                   <td style={{ padding: '16px 24px' }}><button className="btn btn-sm btn-secondary">Détails</button></td>
+                </tr>
+              ))}
+              {activeTab === 'reservations' && reservations.map(res => (
+                <tr key={res.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '16px 24px', fontSize: '0.9rem' }}>#{res.id}</td>
+                  <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 600 }}>{res.user?.name}</td>
+                  <td style={{ padding: '16px 24px', fontSize: '0.9rem' }}>{res.place?.icon} {res.place?.name}</td>
+                  <td style={{ padding: '16px 24px', fontSize: '0.9rem', fontWeight: 700, color: '#ff4757' }}>#{res.queueNumber}</td>
+                  <td style={{ padding: '16px 24px' }}>
+                    <span style={{
+                      padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+                      background: res.status === 'waiting' ? 'rgba(243,156,18,0.15)' : res.status === 'called' ? 'rgba(46,213,115,0.15)' : res.status === 'done' ? 'rgba(46,213,115,0.3)' : 'rgba(231,76,60,0.15)',
+                      color: res.status === 'waiting' ? '#f39c12' : res.status === 'called' ? '#2ed573' : res.status === 'done' ? '#27ae60' : '#e74c3c'
+                    }}>{res.status === 'waiting' ? 'En attente' : res.status === 'called' ? 'Appelé' : res.status === 'done' ? 'Terminé' : 'Annulé'}</span>
+                  </td>
+                  <td style={{ padding: '16px 24px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {res.status === 'waiting' && (
+                      <button onClick={() => handleReservationStatus(res.id, 'called')} className="btn btn-sm" style={{ background: 'rgba(46,213,115,0.15)', color: '#2ed573', border: 'none', padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <Phone size={12} /> Appeler
+                      </button>
+                    )}
+                    {res.status === 'called' && (
+                      <button onClick={() => handleReservationStatus(res.id, 'done')} className="btn btn-sm" style={{ background: 'rgba(39,174,96,0.15)', color: '#27ae60', border: 'none', padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <CheckCircle size={12} /> Terminé
+                      </button>
+                    )}
+                    {(res.status === 'waiting' || res.status === 'called') && (
+                      <button onClick={() => handleReservationStatus(res.id, 'cancelled')} className="btn btn-sm" style={{ background: 'rgba(231,76,60,0.1)', color: '#e74c3c', border: 'none', padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <XCircle size={12} /> Annuler
+                      </button>
+                    )}
+                    {(res.status === 'done' || res.status === 'cancelled') && (
+                      <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -42,4 +42,8 @@ Reservation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Place.hasMany(Reservation, { foreignKey: 'placeId', as: 'reservations' });
 Reservation.belongsTo(Place, { foreignKey: 'placeId', as: 'place' });
 
+// Place owner association
+User.hasOne(Place, { foreignKey: 'userId', as: 'place' });
+Place.belongsTo(User, { foreignKey: 'userId', as: 'owner' });
+
 module.exports = { sequelize, User, Restaurant, Product, Order, OrderItem, Place, Reservation };
