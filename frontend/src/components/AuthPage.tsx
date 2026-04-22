@@ -3,9 +3,12 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Truck } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,6 +27,7 @@ export default function AuthPage() {
       } else {
         await register(name, email, password, role, phone);
       }
+      router.push('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
       setError(msg);

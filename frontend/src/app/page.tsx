@@ -2,17 +2,19 @@
 
 import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import AuthPage from '@/components/AuthPage';
 import Navbar from '@/components/Navbar';
 import CustomerDashboard from '@/components/dashboards/CustomerDashboard';
 import RestaurantDashboard from '@/components/dashboards/RestaurantDashboard';
 import DriverDashboard from '@/components/dashboards/DriverDashboard';
 import AdminDashboard from '@/components/dashboards/AdminDashboard';
+import LandingPage from '@/components/LandingPage';
 import { useOrderStore } from '@/store/orderStore';
 
 export default function Home() {
-  const { user, isLoading, loadUser } = useAuthStore();
-  const { listenToSocket } = useOrderStore();
+  const user = useAuthStore(state => state.user);
+  const isLoading = useAuthStore(state => state.isLoading);
+  const loadUser = useAuthStore(state => state.loadUser);
+  const listenToSocket = useOrderStore(state => state.listenToSocket);
 
   useEffect(() => {
     loadUser();
@@ -35,7 +37,9 @@ export default function Home() {
     );
   }
 
-  if (!user) return <AuthPage />;
+  if (!user) {
+    return <LandingPage />;
+  }
 
   return (
     <div className="app-layout">

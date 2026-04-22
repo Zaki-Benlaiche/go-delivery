@@ -15,16 +15,23 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
-  isLoading: true,
+  isLoading: false,
 
   loadUser: () => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      const userData = localStorage.getItem('user');
-      if (token && userData) {
-        set({ token, user: JSON.parse(userData), isLoading: false });
-      } else {
-        set({ isLoading: false });
+      try {
+        const token = localStorage.getItem('token');
+        const userData = localStorage.getItem('user');
+        if (token && userData) {
+          set({ token, user: JSON.parse(userData), isLoading: false });
+        } else {
+          set({ isLoading: false });
+        }
+      } catch (error) {
+        console.error('Failed to parse user data', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        set({ token: null, user: null, isLoading: false });
       }
     }
   },
