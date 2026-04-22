@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { Truck } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function AuthPage() {
@@ -38,7 +37,7 @@ export default function AuthPage() {
     <div className="auth-page">
       <div className="auth-card fade-in">
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <Truck size={48} color="#ff4757" />
+          <img src="/logo.png" alt="GO-DELIVERY" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
         </div>
         <h1 style={{ textAlign: 'center' }}>GO-DELIVERY</h1>
         <p className="subtitle" style={{ textAlign: 'center' }}>
