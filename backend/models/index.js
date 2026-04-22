@@ -4,6 +4,8 @@ const Restaurant = require('./Restaurant');
 const Product = require('./Product');
 const Order = require('./Order');
 const OrderItem = require('./OrderItem');
+const Place = require('./Place');
+const Reservation = require('./Reservation');
 
 // ========== ASSOCIATIONS ==========
 
@@ -33,4 +35,11 @@ OrderItem.belongsTo(Order, { foreignKey: 'orderId' });
 Product.hasMany(OrderItem, { foreignKey: 'productId' });
 OrderItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
-module.exports = { sequelize, User, Restaurant, Product, Order, OrderItem };
+// Reservation associations
+User.hasMany(Reservation, { foreignKey: 'userId', as: 'reservations' });
+Reservation.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+Place.hasMany(Reservation, { foreignKey: 'placeId', as: 'reservations' });
+Reservation.belongsTo(Place, { foreignKey: 'placeId', as: 'place' });
+
+module.exports = { sequelize, User, Restaurant, Product, Order, OrderItem, Place, Reservation };

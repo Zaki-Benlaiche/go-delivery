@@ -4,10 +4,11 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 require('dotenv').config();
 
-const { sequelize, User, Restaurant, Product } = require('./models');
+const { sequelize, User, Restaurant, Product, Place } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const restaurantRoutes = require('./routes/restaurantRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const reservationRoutes = require('./routes/reservationRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/orders', require('./routes/orderRoutes')(io));
 app.use('/api/admin', adminRoutes);
+app.use('/api', reservationRoutes);
 
 // Socket.io
 io.on('connection', (socket) => {
@@ -46,7 +48,7 @@ const seedDatabase = async () => {
   try {
     const userCount = await User.count();
     const restaurantCount = await Restaurant.count();
-    
+
     if (userCount > 0 && restaurantCount > 0) {
       console.log('✅ Database already seeded.');
       return;
@@ -96,6 +98,18 @@ const seedDatabase = async () => {
     const driver = await User.findOne({ where: { role: 'driver' } });
     if (!driver) {
       await User.create({ name: 'Driver Mohamed', email: 'driver@go.com', password: 'password123', role: 'driver', phone: '0770000001' });
+    }
+
+    // Seed Places for Reservation Feature
+    const placeCount = await Place.count();
+    if (placeCount === 0) {
+      await Place.bulkCreate([
+        { name: 'Dr. Karim - Cardiologue', type: 'doctor', address: 'Centre Ville', description: 'Consultation sur rendez-vous et file d\'attente', icon: '🩺' },
+        { name: 'Dr. Sarah - Dentiste', type: 'doctor', address: 'El Kodia', description: 'Soins dentaires professionnels', icon: '🦷' },
+        { name: 'Clinique El Shifa', type: 'clinic', address: 'Route Nationale', description: 'Urgences et consultations générales', icon: '🏥' },
+        { name: 'APC - Mairie (Etat Civil)', type: 'government', address: 'Place Centrale', description: 'Retrait de documents administratifs', icon: '🏢' },
+        { name: 'Algérie Poste', type: 'other', address: 'Boulevard Principal', description: 'Retrait et versement', icon: '📮' },
+      ]);
     }
 
     console.log('✅ Seed data check/creation successfully!');
