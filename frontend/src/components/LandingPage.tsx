@@ -5,10 +5,10 @@ import { Truck, Smartphone, Star, Zap, ChevronRight, ClipboardList, MapPin, Cloc
 import AuthPage from './AuthPage';
 
 export default function LandingPage() {
-    const [showAuth, setShowAuth] = useState(false);
+    const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
 
     if (showAuth) {
-        return <AuthPage onBack={() => setShowAuth(false)} />;
+        return <AuthPage onBack={() => setShowAuth(null)} initialMode={showAuth} />;
     }
 
     return (
@@ -35,7 +35,7 @@ export default function LandingPage() {
                     </span>
                 </div>
                 <button
-                    onClick={() => setShowAuth(true)}
+                    onClick={() => setShowAuth('login')}
                     style={{
                         display: 'flex', alignItems: 'center', gap: '6px',
                         padding: '10px 20px', borderRadius: '50px',
@@ -46,7 +46,7 @@ export default function LandingPage() {
                         transition: 'all 0.3s',
                     }}
                 >
-                    Commencer <ChevronRight size={16} />
+                    Se connecter <ChevronRight size={16} />
                 </button>
             </nav>
 
@@ -104,7 +104,7 @@ export default function LandingPage() {
                         flexWrap: 'wrap', marginBottom: '20px',
                     }}>
                         <button
-                            onClick={() => setShowAuth(true)}
+                            onClick={() => setShowAuth('register')}
                             style={{
                                 padding: 'clamp(14px, 3vw, 18px) clamp(28px, 5vw, 40px)',
                                 fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', borderRadius: '50px',
@@ -289,7 +289,7 @@ export default function LandingPage() {
                         Rejoignez des milliers d&apos;utilisateurs qui font confiance à GO-DELIVERY.
                     </p>
                     <button
-                        onClick={() => setShowAuth(true)}
+                        onClick={() => setShowAuth('register')}
                         style={{
                             padding: 'clamp(14px, 3vw, 18px) clamp(32px, 6vw, 48px)',
                             fontSize: 'clamp(0.95rem, 2.5vw, 1.1rem)', borderRadius: '50px',

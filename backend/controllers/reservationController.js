@@ -202,3 +202,32 @@ exports.getPlacesWithQueue = async (req, res) => {
         res.status(500).json({ message: 'Error', error: error.message });
     }
 };
+
+// 10. Update place info (owner or admin)
+exports.updatePlace = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, address, description, type, icon } = req.body;
+
+        const place = await Place.findByPk(id);
+        if (!place) {
+            return res.status(404).json({ message: 'Place not found' });
+        }
+
+        // Allow only the owner or admin
+        if (place.userId !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        if (name) place.name = name;
+        if (address !== undefined) place.address = address;
+        if (description !== undefined) place.description = description;
+        if (type) place.type = type;
+        if (icon) place.icon = icon;
+
+        await place.save();
+        res.json({ message: 'Place updated', place });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating place', error: error.message });
+    }
+};
