@@ -14,7 +14,8 @@ import {
   ClipboardList,
   Phone,
   CheckCircle,
-  XCircle
+  XCircle,
+  Trash2
 } from 'lucide-react';
 import StatusBadge from '../StatusBadge';
 
@@ -79,6 +80,18 @@ export default function AdminDashboard() {
       alert(`Le rôle a été mis à jour avec succès : ${newRole}`);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erreur lors de la mise à jour du rôle');
+    }
+  };
+
+  const handleDeleteUser = async (userId: number, userName: string) => {
+    if (!window.confirm(`Voulez-vous vraiment supprimer l'utilisateur "${userName}" ? Cette action est irréversible.`)) return;
+
+    try {
+      await api.delete(`/admin/users/${userId}`);
+      setUsers(users.filter(u => u.id !== userId));
+      alert(`L'utilisateur ${userName} a été supprimé.`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors de la suppression');
     }
   };
 
@@ -206,12 +219,21 @@ export default function AdminDashboard() {
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <button
-                      className={`btn btn-sm ${user.role === 'admin' ? 'btn-secondary' : 'btn-primary'}`}
-                      onClick={() => handleRoleChange(user.id, user.role)}
-                    >
-                      {user.role === 'admin' ? 'Retirer' : 'Admin'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button
+                        className={`btn btn-sm ${user.role === 'admin' ? 'btn-secondary' : 'btn-primary'}`}
+                        onClick={() => handleRoleChange(user.id, user.role)}
+                      >
+                        {user.role === 'admin' ? 'Retirer' : 'Admin'}
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        style={{ background: 'var(--danger-glow)', color: '#e74c3c', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={() => handleDeleteUser(user.id, user.name)}
+                      >
+                        <Trash2 size={12} /> Supprimer
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

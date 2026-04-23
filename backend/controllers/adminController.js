@@ -1,4 +1,4 @@
-const { User, Restaurant, Order, Product } = require('../models');
+const { User, Restaurant, Order, Product, Place } = require('../models');
 
 exports.getStats = async (req, res) => {
   try {
@@ -61,12 +61,11 @@ exports.updateUserRole = async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    const validRoles = ['client', 'restaurant', 'driver', 'admin'];
+    const validRoles = ['client', 'restaurant', 'driver', 'admin', 'place'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ message: 'Invalid role.' });
     }
 
-    // Prevent admin from changing their own role
     if (parseInt(id) === req.user.id) {
       return res.status(400).json({ message: 'You cannot change your own role.' });
     }
@@ -80,5 +79,39 @@ exports.updateUserRole = async (req, res) => {
     res.json({ message: `User ${user.name} is now ${role}.`, user: { id: user.id, name: user.name, role: user.role } });
   } catch (err) {
     res.status(500).json({ message: 'Error updating role', error: err.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (parseInt(id) === req.user.id) {
+      return res.status(400).json({ message: 'Vous ne pouvez pas supprimer votre propre compte.' });
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ message: 'Utilisateur non trouvé.' });
+
+    // Clean up associated data
+    if (user.role === 'restaurant') {
+      const restaurant = await Restaurant.findOne({ where: { userId: user.id } });
+      if (restaurant) {
+        await Product.destroy({ where: { restaurantId: restaurant.id } });
+        await restaurant.destroy();
+      }
+    }
+
+    if (user.role === 'place') {
+      await Place.destroy({ where: { userId: user.id } });
+    }
+
+    const userName = user.name;
+    await user.destroy();
+
+    console.log(`🗑️ User deleted: ${userName} (ID: ${id})`);
+    res.json({ message: `L'utilisateur ${userName} a été supprimé avec succès.` });
+  } catch (err) {
+    res.status(500).json({ message: 'Erreur lors de la suppression', error: err.message });
   }
 };

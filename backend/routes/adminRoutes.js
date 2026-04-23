@@ -12,5 +12,6 @@ router.get('/users', adminController.getAllUsers);
 router.get('/restaurants', adminController.getAllRestaurants);
 router.get('/orders', adminController.getAllOrders);
 router.put('/users/:id/role', adminController.updateUserRole);
+router.delete('/users/:id', adminController.deleteUser);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User, Restaurant } = require('../models');
+const { User, Restaurant, Place } = require('../models');
 const { SECRET } = require('../middleware/auth');
 
 exports.register = async (req, res) => {
@@ -17,22 +17,34 @@ exports.register = async (req, res) => {
     }
 
     // Block admin registration from public API
-    const allowedRoles = ['client', 'restaurant', 'driver'];
+    const allowedRoles = ['client', 'restaurant', 'driver', 'place'];
     const safeRole = allowedRoles.includes(role) ? role : 'client';
 
     const user = await User.create({ name, email, password, role: safeRole, phone: phone || '' });
 
     // If registering as restaurant, create a restaurant entry
-    if (role === 'restaurant') {
+    if (safeRole === 'restaurant') {
       await Restaurant.create({
         name: `${name}'s Restaurant`,
         userId: user.id,
       });
     }
 
+    // If registering as place (établissement), create a Place entry
+    if (safeRole === 'place') {
+      await Place.create({
+        name: name,
+        type: 'other',
+        address: '',
+        description: 'Nouvel établissement',
+        icon: '🏢',
+        userId: user.id,
+      });
+    }
+
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
 
-    console.log(`✅ User registered: ${email} (${role})`);
+    console.log(`✅ User registered: ${email} (${safeRole})`);
     res.status(201).json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },

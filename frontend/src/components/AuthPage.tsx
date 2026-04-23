@@ -2,12 +2,16 @@
 
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 
-export default function AuthPage() {
-  const searchParams = useSearchParams();
+interface AuthPageProps {
+  onBack?: () => void;
+}
+
+export default function AuthPage({ onBack }: AuthPageProps) {
   const router = useRouter();
-  const [isLogin, setIsLogin] = useState(searchParams.get('mode') !== 'register');
+  const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +40,19 @@ export default function AuthPage() {
   return (
     <div className="auth-page">
       <div className="auth-card fade-in">
+        {onBack && (
+          <button
+            onClick={onBack}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+              fontSize: '0.85rem', marginBottom: '16px', padding: 0,
+            }}
+          >
+            <ChevronLeft size={18} /> Retour
+          </button>
+        )}
+
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
           <img src="/logo.png" alt="GO-DELIVERY" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
         </div>
