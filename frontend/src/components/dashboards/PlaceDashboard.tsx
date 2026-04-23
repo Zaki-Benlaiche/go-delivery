@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
-import { Phone, CheckCircle, XCircle, Clock, Users, ClipboardList, TrendingUp } from 'lucide-react';
+import { Phone, CheckCircle, XCircle, Clock, Users, ClipboardList, TrendingUp, RefreshCw } from 'lucide-react';
 
 interface PlaceReservation {
     id: number;
@@ -59,110 +59,105 @@ export default function PlaceDashboard() {
     const statusColors: Record<string, string> = { waiting: '#f39c12', called: '#2ed573', done: '#27ae60', cancelled: '#e74c3c' };
     const statusLabels: Record<string, string> = { waiting: 'En attente', called: 'Appelé', done: 'Terminé', cancelled: 'Annulé' };
 
-    if (loading) return <div className="empty-state"><div className="pulse" style={{ fontSize: '2rem' }}>Chargement...</div></div>;
+    if (loading) return <div className="empty-state"><div className="pulse-icon" style={{ fontSize: '2rem' }}>Chargement...</div></div>;
+
+    const statsData = [
+        { icon: <Users size={22} />, value: todayReservations.length, label: "Total aujourd'hui", color: '#1e90ff', borderColor: 'rgba(30,144,255,0.2)' },
+        { icon: <Clock size={22} />, value: waiting.length, label: 'En attente', color: '#f39c12', borderColor: 'rgba(243,156,18,0.2)' },
+        { icon: <Phone size={22} />, value: called.length, label: 'Appelés', color: '#2ed573', borderColor: 'rgba(46,213,115,0.2)' },
+        { icon: <TrendingUp size={22} />, value: done.length, label: 'Terminés', color: '#27ae60', borderColor: 'rgba(39,174,96,0.2)' },
+    ];
 
     return (
         <div className="fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>
             {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #1e90ff 0%, #4facfe 100%)', borderRadius: '20px', padding: '32px', marginBottom: '32px', color: 'white', position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{ fontSize: '3rem', background: 'rgba(255,255,255,0.15)', width: '80px', height: '80px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {place?.icon || '📋'}
+            <div style={{ background: 'var(--gradient-blue)', borderRadius: '18px', padding: 'clamp(20px, 4vw, 32px)', marginBottom: '28px', color: 'white', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 20px)', flexWrap: 'wrap' }}>
+                    <div className="icon-box icon-box-lg" style={{ background: 'rgba(255,255,255,0.15)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', flexShrink: 0 }}>
+                        {place?.icon || <ClipboardList size={28} />}
                     </div>
-                    <div>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0 }}>{place?.name}</h1>
-                        <p style={{ opacity: 0.85, margin: '4px 0 0', fontSize: '1rem' }}>{place?.address} — {place?.description}</p>
+                    <div style={{ minWidth: 0 }}>
+                        <h1 style={{ fontSize: 'clamp(1.2rem, 4vw, 1.7rem)', fontWeight: 900, margin: 0, wordBreak: 'break-word' }}>{place?.name}</h1>
+                        <p style={{ opacity: 0.85, margin: '4px 0 0', fontSize: 'clamp(0.78rem, 2vw, 0.95rem)', wordBreak: 'break-word' }}>{place?.address} — {place?.description}</p>
                     </div>
                 </div>
-                <div style={{ position: 'absolute', right: '5%', top: '50%', transform: 'translateY(-50%)', fontSize: '8rem', opacity: 0.1 }}>📋</div>
             </div>
 
-            {/* Stats Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-                <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Users size={24} color="#1e90ff" style={{ marginBottom: '8px' }} />
-                    <div style={{ fontSize: '2rem', fontWeight: 900 }}>{todayReservations.length}</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Total aujourd&apos;hui</div>
-                </div>
-                <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', textAlign: 'center', border: '1px solid rgba(243,156,18,0.2)' }}>
-                    <Clock size={24} color="#f39c12" style={{ marginBottom: '8px' }} />
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color: '#f39c12' }}>{waiting.length}</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>En attente</div>
-                </div>
-                <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', textAlign: 'center', border: '1px solid rgba(46,213,115,0.2)' }}>
-                    <Phone size={24} color="#2ed573" style={{ marginBottom: '8px' }} />
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color: '#2ed573' }}>{called.length}</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Appelés</div>
-                </div>
-                <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', textAlign: 'center', border: '1px solid rgba(39,174,96,0.2)' }}>
-                    <TrendingUp size={24} color="#27ae60" style={{ marginBottom: '8px' }} />
-                    <div style={{ fontSize: '2rem', fontWeight: 900, color: '#27ae60' }}>{done.length}</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.5 }}>Terminés</div>
-                </div>
+            {/* Stats Cards — 2 cols on mobile, 4 on desktop */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '28px' }}>
+                {statsData.map((s, i) => (
+                    <div key={i} className="stat-card" style={{ borderColor: s.borderColor }}>
+                        <div style={{ marginBottom: '8px', color: s.color }}>{s.icon}</div>
+                        <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
+                        <div className="stat-label">{s.label}</div>
+                    </div>
+                ))}
             </div>
 
             {/* Queue Table */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <ClipboardList size={20} color="#1e90ff" /> File d&apos;attente du jour
+            <div style={{ background: 'var(--bg-card)', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <h2 style={{ margin: 0, fontSize: 'clamp(0.95rem, 2.5vw, 1.15rem)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <ClipboardList size={18} color="#1e90ff" /> File d&apos;attente du jour
                     </h2>
-                    <button onClick={fetchData} style={{ background: 'rgba(30,144,255,0.1)', color: '#1e90ff', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
-                        🔄 Actualiser
+                    <button onClick={fetchData} className="btn btn-sm" style={{ background: 'var(--info-glow)', color: '#1e90ff', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <RefreshCw size={13} /> Actualiser
                     </button>
                 </div>
 
                 {todayReservations.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '60px', opacity: 0.5 }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🕐</div>
+                    <div style={{ textAlign: 'center', padding: 'clamp(30px, 6vw, 60px)', opacity: 0.5 }}>
+                        <Clock size={40} style={{ marginBottom: '12px' }} />
                         <p>Aucune réservation pour aujourd&apos;hui</p>
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '460px' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
-                                    <th style={{ padding: '14px 20px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'left' }}>N°</th>
-                                    <th style={{ padding: '14px 20px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'left' }}>Client</th>
-                                    <th style={{ padding: '14px 20px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'left' }}>Téléphone</th>
-                                    <th style={{ padding: '14px 20px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'left' }}>Statut</th>
-                                    <th style={{ padding: '14px 20px', fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'left' }}>Actions</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>N°</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Client</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Téléphone</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Statut</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {todayReservations.sort((a, b) => a.queueNumber - b.queueNumber).map(res => (
                                     <tr key={res.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
-                                        <td style={{ padding: '16px 20px', fontWeight: 900, fontSize: '1.2rem', color: '#1e90ff' }}>#{res.queueNumber}</td>
-                                        <td style={{ padding: '16px 20px', fontWeight: 600 }}>{res.user?.name}</td>
-                                        <td style={{ padding: '16px 20px', color: 'var(--text-muted)' }}>{res.user?.phone || '—'}</td>
-                                        <td style={{ padding: '16px 20px' }}>
+                                        <td style={{ padding: '14px 16px', fontWeight: 900, fontSize: '1.1rem', color: '#1e90ff' }}>#{res.queueNumber}</td>
+                                        <td style={{ padding: '14px 16px', fontWeight: 600 }}>{res.user?.name}</td>
+                                        <td style={{ padding: '14px 16px', color: 'var(--text-muted)' }}>{res.user?.phone || '—'}</td>
+                                        <td style={{ padding: '14px 16px' }}>
                                             <span style={{
-                                                padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                                                padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
                                                 background: `${statusColors[res.status]}20`, color: statusColors[res.status],
                                                 textTransform: 'uppercase'
                                             }}>
                                                 {statusLabels[res.status] || res.status}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '16px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                            {res.status === 'waiting' && (
-                                                <button onClick={() => updateStatus(res.id, 'called')} style={{ background: 'rgba(46,213,115,0.15)', color: '#2ed573', border: 'none', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <Phone size={14} /> Appeler
-                                                </button>
-                                            )}
-                                            {res.status === 'called' && (
-                                                <button onClick={() => updateStatus(res.id, 'done')} style={{ background: 'rgba(39,174,96,0.15)', color: '#27ae60', border: 'none', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <CheckCircle size={14} /> Terminé
-                                                </button>
-                                            )}
-                                            {(res.status === 'waiting' || res.status === 'called') && (
-                                                <button onClick={() => updateStatus(res.id, 'cancelled')} style={{ background: 'rgba(231,76,60,0.1)', color: '#e74c3c', border: 'none', padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <XCircle size={14} /> Annuler
-                                                </button>
-                                            )}
-                                            {(res.status === 'done' || res.status === 'cancelled') && (
-                                                <span style={{ fontSize: '0.85rem', opacity: 0.4 }}>—</span>
-                                            )}
+                                        <td style={{ padding: '14px 16px' }}>
+                                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                                {res.status === 'waiting' && (
+                                                    <button onClick={() => updateStatus(res.id, 'called')} className="btn btn-sm" style={{ background: 'var(--success-glow)', color: '#2ed573', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <Phone size={12} /> Appeler
+                                                    </button>
+                                                )}
+                                                {res.status === 'called' && (
+                                                    <button onClick={() => updateStatus(res.id, 'done')} className="btn btn-sm" style={{ background: 'rgba(39,174,96,0.15)', color: '#27ae60', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <CheckCircle size={12} /> Terminé
+                                                    </button>
+                                                )}
+                                                {(res.status === 'waiting' || res.status === 'called') && (
+                                                    <button onClick={() => updateStatus(res.id, 'cancelled')} className="btn btn-sm" style={{ background: 'var(--danger-glow)', color: '#e74c3c', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <XCircle size={12} /> Annuler
+                                                    </button>
+                                                )}
+                                                {(res.status === 'done' || res.status === 'cancelled') && (
+                                                    <span style={{ fontSize: '0.8rem', opacity: 0.4 }}>—</span>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
