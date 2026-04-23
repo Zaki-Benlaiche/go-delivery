@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import Navbar from '@/components/Navbar';
+import NotificationToast from '@/components/NotificationToast';
 import CustomerDashboard from '@/components/dashboards/CustomerDashboard';
 import RestaurantDashboard from '@/components/dashboards/RestaurantDashboard';
 import DriverDashboard from '@/components/dashboards/DriverDashboard';
@@ -43,15 +44,18 @@ export default function Home() {
   }
 
   return (
-    <div className="app-layout">
-      <Navbar />
-      <div className="container fade-in">
-        {user.role === 'client' && <CustomerDashboard />}
-        {user.role === 'restaurant' && <RestaurantDashboard />}
-        {user.role === 'driver' && <DriverDashboard />}
-        {user.role === 'admin' && <AdminDashboard />}
-        {user.role === 'place' && <PlaceDashboard />}
+    <>
+      <NotificationToast />
+      <div className="app-layout">
+        <Navbar />
+        <div className="container fade-in">
+          {user.role === 'client' && <CustomerDashboard />}
+          {user.role === 'restaurant' && <RestaurantDashboard />}
+          {user.role === 'driver' && <DriverDashboard />}
+          {user.role === 'admin' && <AdminDashboard />}
+          {user.role === 'place' && <PlaceDashboard />}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

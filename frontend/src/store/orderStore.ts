@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import api from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { useAuthStore } from '@/store/authStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import type { Order } from '@/types';
 
 interface OrderState {
@@ -14,6 +15,16 @@ interface OrderState {
   updateStatus: (orderId: number, status: string) => Promise<void>;
   listenToSocket: () => () => void;
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'En Attente',
+  accepted: 'Acceptée',
+  preparing: 'En Préparation',
+  ready: 'Prête',
+  out_for_delivery: 'En Livraison',
+  delivered: 'Livrée',
+  cancelled: 'Annulée',
+};
 
 export const useOrderStore = create<OrderState>((set, get) => ({
   orders: [],
@@ -65,11 +76,102 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     const socket = getSocket();
     if (!socket) return () => {};
 
+    const addNotif = useNotificationStore.getState().addNotification;
+
     const handleOrderUpdate = (order: Order) => {
       console.log('📦 Order updated via socket:', order.id, order.status);
       
       const user = useAuthStore.getState().user;
       if (!user) return;
+
+      // --- NOTIFICATIONS ---
+      const statusLabel = STATUS_LABELS[order.status] || order.status;
+      const restaurantName = order.restaurant?.name || 'Restaurant';
+      const customerName = order.customer?.name || 'Client';
+
+      if (user.role === 'client' && order.customerId === user.id) {
+        if (order.status === 'accepted' || order.status === 'preparing') {
+          addNotif({
+            type: 'order_accepted',
+            title: 'Commande Acceptée',
+            message: `${restaurantName} prépare votre commande #${order.id}`,
+            icon: '👨‍🍳',
+            color: '#2ed573',
+            orderId: order.id,
+          });
+        } else if (order.status === 'ready') {
+          addNotif({
+            type: 'order_ready',
+            title: 'Commande Prête',
+            message: `Votre commande #${order.id} est prête, un livreur arrive`,
+            icon: '📦',
+            color: '#ffc048',
+            orderId: order.id,
+          });
+        } else if (order.status === 'out_for_delivery') {
+          addNotif({
+            type: 'order_delivering',
+            title: 'En Livraison',
+            message: `Votre commande #${order.id} est en route !`,
+            icon: '🛵',
+            color: '#1e90ff',
+            orderId: order.id,
+          });
+        } else if (order.status === 'delivered') {
+          addNotif({
+            type: 'order_delivered',
+            title: 'Livrée !',
+            message: `Commande #${order.id} livrée. Bon appétit ! 🎉`,
+            icon: '✅',
+            color: '#2ed573',
+            orderId: order.id,
+          });
+        } else if (order.status === 'cancelled') {
+          addNotif({
+            type: 'order_cancelled',
+            title: 'Annulée',
+            message: `Commande #${order.id} a été annulée`,
+            icon: '❌',
+            color: '#ff4757',
+            orderId: order.id,
+          });
+        }
+      }
+
+      if (user.role === 'restaurant' && order.restaurant?.userId === user.id) {
+        if (order.status === 'out_for_delivery') {
+          addNotif({
+            type: 'order_delivering',
+            title: 'Livreur en Route',
+            message: `Commande #${order.id} prise par ${order.driver?.name || 'un livreur'}`,
+            icon: '🚗',
+            color: '#1e90ff',
+            orderId: order.id,
+          });
+        } else if (order.status === 'delivered') {
+          addNotif({
+            type: 'order_delivered',
+            title: 'Livrée !',
+            message: `Commande #${order.id} livrée à ${customerName}`,
+            icon: '✅',
+            color: '#2ed573',
+            orderId: order.id,
+          });
+        }
+      }
+
+      if (user.role === 'driver' && order.driverId === user.id) {
+        if (order.status === 'delivered') {
+          addNotif({
+            type: 'order_delivered',
+            title: 'Course Terminée',
+            message: `Livraison #${order.id} confirmée. Bien joué ! 💪`,
+            icon: '✅',
+            color: '#2ed573',
+            orderId: order.id,
+          });
+        }
+      }
 
       set((state) => {
         const isMyOrder = 
@@ -96,6 +198,30 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       const user = useAuthStore.getState().user;
       if (!user) return;
 
+      // --- NOTIFICATION for restaurant ---
+      if (user.role === 'restaurant' && order.restaurant?.userId === user.id) {
+        addNotif({
+          type: 'new_order',
+          title: 'Nouvelle Commande !',
+          message: `${order.customer?.name || 'Client'} — ${order.total} DA`,
+          icon: '🔔',
+          color: '#ff4757',
+          orderId: order.id,
+        });
+      }
+
+      // --- NOTIFICATION for client (confirmation) ---
+      if (user.role === 'client' && order.customerId === user.id) {
+        addNotif({
+          type: 'new_order',
+          title: 'Commande Envoyée',
+          message: `Votre commande #${order.id} a été envoyée à ${order.restaurant?.name || 'le restaurant'}`,
+          icon: '📤',
+          color: '#1e90ff',
+          orderId: order.id,
+        });
+      }
+
       // Filter: Only accept if I am the client who ordered it, OR I am the restaurant owner
       if (user.role === 'client' && order.customerId !== user.id) return;
       if (user.role === 'restaurant' && order.restaurant?.userId !== user.id) return;
@@ -108,6 +234,19 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
     const handleReadyForPickup = (order: Order) => {
       console.log('🚗 Order ready for pickup:', order.id);
+
+      const user = useAuthStore.getState().user;
+      if (user?.role === 'driver') {
+        addNotif({
+          type: 'order_ready',
+          title: 'Course Disponible !',
+          message: `${order.restaurant?.name || 'Restaurant'} — ${order.total} DA`,
+          icon: '🚗',
+          color: '#ffc048',
+          orderId: order.id,
+        });
+      }
+
       set((state) => ({
         availableOrders: [order, ...state.availableOrders.filter((o) => o.id !== order.id)],
       }));
