@@ -34,7 +34,8 @@
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --app-max-width: 480px;
+  --app-max-width: 1200px;
+  --app-mobile-width: 480px;
 }
 
 * {
@@ -58,7 +59,7 @@ html {
   scroll-behavior: smooth;
 }
 
-/* ===== CENTERED MOBILE LAYOUT ===== */
+/* ===== APP LAYOUT ===== */
 .app-layout {
   min-height: 100vh;
   min-height: 100dvh;
@@ -68,14 +69,13 @@ html {
   margin: 0 auto;
   position: relative;
   background: var(--bg);
-  box-shadow: 0 0 80px rgba(0,0,0,0.5);
 }
 
-/* Subtle side glow on desktop to frame the app */
-@media (min-width: 520px) {
+/* Mobile: center at 480px */
+@media (max-width: 767px) {
   .app-layout {
-    border-left: 1px solid rgba(255,255,255,0.03);
-    border-right: 1px solid rgba(255,255,255,0.03);
+    max-width: var(--app-mobile-width);
+    box-shadow: 0 0 80px rgba(0,0,0,0.5);
   }
   body {
     background: #050507;
@@ -86,6 +86,12 @@ html {
   padding: 20px 16px;
   flex: 1;
   width: 100%;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: 28px 32px;
+  }
 }
 
 .page-title {
@@ -120,6 +126,18 @@ html {
 
 .grid-2 {
   grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .grid {
+    gap: 18px;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 /* ===== ICON BOX UTILITY ===== */
@@ -748,6 +766,26 @@ textarea.input {
   display: none;
 }
 
+@media (min-width: 768px) {
+  .customer-layout {
+    flex-direction: row;
+    gap: 28px;
+  }
+  .customer-layout > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .desktop-cart {
+    display: block;
+    width: 340px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
+}
+
 .mobile-cart-bar {
   display: flex;
   position: fixed;
@@ -755,7 +793,7 @@ textarea.input {
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 28px);
-  max-width: calc(var(--app-max-width) - 28px);
+  max-width: calc(var(--app-mobile-width) - 28px);
   background: var(--gradient);
   color: white;
   padding: 14px 20px;
@@ -766,6 +804,12 @@ textarea.input {
   z-index: 1000;
   cursor: pointer;
   animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@media (min-width: 768px) {
+  .mobile-cart-bar {
+    max-width: 500px;
+  }
 }
 
 @keyframes popIn {
@@ -814,7 +858,7 @@ textarea.input {
   padding: 24px 20px;
   padding-bottom: env(safe-area-inset-bottom, 24px);
   width: 100%;
-  max-width: var(--app-max-width);
+  max-width: 560px;
   max-height: 85vh;
   overflow-y: auto;
   animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1);
