@@ -45,6 +45,32 @@ export default function DownloadPage() {
           <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.5)', marginTop: '1rem' }}>
             الإصدار 1.0.0 • يدعم Android 8.0 والفئات الأحدث
           </p>
+
+          {/* QR Code Section */}
+          <div style={{
+            marginTop: '2rem', padding: '2rem',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem',
+            width: '100%',
+          }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>
+              أو امسح رمز QR للدخول مباشرة
+            </h3>
+            <div style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '20px', padding: '16px',
+            }}>
+              <img
+                src="/qrcode.png"
+                alt="QR Code - Réserve-vite"
+                style={{ width: '200px', height: '200px', borderRadius: '12px' }}
+              />
+            </div>
+            <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)' }}>
+              go-delivery-ten.vercel.app
+            </p>
+          </div>
         </div>
       </div>
     </div>
