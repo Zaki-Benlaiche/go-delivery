@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Go Delivery</string>
-    <string name="title_activity_main">Go Delivery</string>
+    <string name="app_name">Réserve-vite</string>
+    <string name="title_activity_main">Réserve-vite</string>
     <string name="package_name">com.godelivery.app</string>
     <string name="custom_url_scheme">com.godelivery.app</string>
 </resources>
