@@ -93,9 +93,9 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
         )}
 
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <img src="/logo.png" alt="GO-DELIVERY" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
+          <img src="/logo.png" alt="Réserve-vite" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
         </div>
-        <h1 style={{ textAlign: 'center' }}>GO-DELIVERY</h1>
+        <h1 style={{ textAlign: 'center' }}>Réserve-vite</h1>
         <p className="subtitle" style={{ textAlign: 'center' }}>
           {isLogin ? 'Connectez-vous à votre compte' : 'Créez un nouveau compte'}
         </p>

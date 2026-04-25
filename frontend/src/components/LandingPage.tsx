@@ -45,16 +45,11 @@ export default function LandingPage() {
                 transition: 'all 0.3s ease',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{
+                    <img src="/logo.png" alt="Réserve-vite" style={{
                         width: '34px', height: '34px', borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #ff4757, #ff6b81)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(255,71,87,0.3)',
-                    }}>
-                        <Truck size={18} color="white" />
-                    </div>
+                    }} />
                     <span style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
-                        <span style={{ color: '#ff4757' }}>GO</span>-DELIVERY
+                        <span style={{ color: '#ff4757' }}>Réserve</span>-vite
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -221,7 +216,7 @@ export default function LandingPage() {
                                 background: 'linear-gradient(135deg, #ff4757, #ffc048)',
                                 height: '140px', padding: '20px', color: 'white',
                             }}>
-                                <div style={{ fontWeight: 800, fontSize: '1.1rem', marginTop: '16px' }}>GO-DELIVERY</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.1rem', marginTop: '16px' }}>Réserve-vite</div>
                                 <div style={{ fontSize: '0.78rem', opacity: 0.85 }}>Bienvenue, cher client</div>
                             </div>
                             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -381,7 +376,7 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ===== WHY GO-DELIVERY ===== */}
+            {/* ===== WHY RÉSERVE-VITE ===== */}
             <section style={{ padding: '48px 20px' }}>
                 <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '32px' }}>
@@ -492,10 +487,10 @@ export default function LandingPage() {
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Truck size={14} color="#ff4757" />
-                    <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>GO-DELIVERY</span>
+                    <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>RÉSERVE-VITE</span>
                 </div>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                    © 2026 GO-DELIVERY. L&apos;excellence algérienne 🇩🇿
+                    © 2026 Réserve-vite. L&apos;excellence algérienne 🇩🇿
                 </p>
             </footer>
 

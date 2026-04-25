@@ -16,7 +16,7 @@ export default function DownloadPage() {
           </div>
 
           <h1 style={{ fontSize: '2.5rem', fontWeight: 800, margin: 0, background: 'linear-gradient(45deg, #ff4757, #ff6b81)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            GO-DELIVERY للموبايل
+            Réserve-vite للموبايل
           </h1>
           
           <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, maxWidth: '600px' }}>

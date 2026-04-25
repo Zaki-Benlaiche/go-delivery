@@ -83,7 +83,7 @@ export default function ReservationPage() {
     if (!user) {
         return (
             <div className="auth-page">
-                <div className="pulse" style={{ fontSize: '2rem', fontWeight: 900 }}>GO-DELIVERY</div>
+                <div className="pulse" style={{ fontSize: '2rem', fontWeight: 900 }}>Réserve-vite</div>
             </div>
         );
     }

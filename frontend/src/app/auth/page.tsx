@@ -7,7 +7,7 @@ function AuthFallback() {
     return (
         <div className="auth-page">
             <div className="pulse" style={{ fontSize: '2rem', fontWeight: 900 }}>
-                GO-DELIVERY
+                Réserve-vite
             </div>
         </div>
     );

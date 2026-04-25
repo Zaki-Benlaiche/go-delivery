@@ -47,7 +47,7 @@ export default function Navbar() {
       }}>
         {/* Left: Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <img src="/logo.png" alt="GO-DELIVERY" style={{ width: '30px', height: '30px', borderRadius: '8px' }} />
+          <img src="/logo.png" alt="Réserve-vite" style={{ width: '30px', height: '30px', borderRadius: '8px' }} />
           <span style={{
             fontSize: '0.95rem',
             fontWeight: 900,
@@ -57,7 +57,7 @@ export default function Navbar() {
             WebkitTextFillColor: 'transparent',
             whiteSpace: 'nowrap',
           }}>
-            GO-DELIVERY
+            RÉSERVE-VITE
           </span>
         </div>
 

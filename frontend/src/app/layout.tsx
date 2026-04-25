@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GO-DELIVERY | Premium Food Delivery',
+  title: 'Réserve-vite | Livraison & Réservation',
   description: 'Order from the best restaurants. Fast, reliable delivery.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'GO-DELIVERY',
+    title: 'Réserve-vite',
   },
 };
 
