@@ -1,23 +1,30 @@
 {
-  "name": "GO-DELIVERY",
-  "short_name": "GoDelivery",
-  "description": "Premium Food Delivery Service",
+  "name": "Réserve-vite",
+  "short_name": "Réserve-vite",
+  "description": "Livraison rapide & Réservation intelligente",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0b0e",
   "theme_color": "#ff4757",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icon-192x192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icon-512x512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "purpose": "any"
     }
   ]
 }
