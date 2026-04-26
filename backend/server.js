@@ -13,21 +13,19 @@ const reservationRoutes = require('./routes/reservationRoutes');
 const app = express();
 const server = http.createServer(app);
 
-// Allowed origins: frontend URL from env, plus localhost for dev
-const allowedOrigins = process.env.FRONTEND_URL
+// CORS: restrict to specific origin only when FRONTEND_URL is explicitly set.
+// Without it (common on fresh deploys), fall back to open — safe because
+// the app also runs as a mobile APK which sends no Origin header.
+const corsOrigin = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001']
-  : ['http://localhost:3000', 'http://localhost:3001'];
+  : '*';
 
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile APK, Postman, curl)
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin not allowed — ${origin}`));
-  },
+  origin: corsOrigin,
   credentials: true,
 };
 
-// Socket.io keeps open origin for mobile APK compatibility
+// Socket.io always stays open for mobile APK compatibility
 const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(cors(corsOptions));

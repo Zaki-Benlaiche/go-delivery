@@ -37,17 +37,31 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email, password) => {
-    const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    set({ user: data.user, token: data.token });
+    try {
+      const { data } = await api.post<AuthResponse>('/auth/login', { email, password });
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      set({ user: data.user, token: data.token });
+    } catch (err: any) {
+      if (!err?.response) {
+        throw new Error('Impossible de contacter le serveur. Vérifiez votre connexion internet.');
+      }
+      throw new Error(err.response.data?.message || 'Email ou mot de passe incorrect.');
+    }
   },
 
   register: async (name, email, password, role, phone) => {
-    const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password, role, phone });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    set({ user: data.user, token: data.token });
+    try {
+      const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password, role, phone });
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      set({ user: data.user, token: data.token });
+    } catch (err: any) {
+      if (!err?.response) {
+        throw new Error('Impossible de contacter le serveur. Vérifiez votre connexion internet.');
+      }
+      throw new Error(err.response.data?.message || 'Erreur lors de la création du compte.');
+    }
   },
 
   logout: () => {
