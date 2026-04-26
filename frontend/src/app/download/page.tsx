@@ -67,7 +67,7 @@ export default function DownloadPage() {
               أو حمّل ملف APK مباشرة:
             </p>
             <a 
-              href="/go-delivery-app.apk" 
+              href="/reserve-vite.apk" 
               download="reserve-vite.apk"
               className="btn btn-secondary"
               style={{ padding: '12px 24px', fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: '8px', borderRadius: '50px', textDecoration: 'none' }}
