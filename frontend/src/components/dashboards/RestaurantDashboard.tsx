@@ -6,14 +6,18 @@ import { useMenuStore } from '@/store/menuStore';
 import StatusBadge from '@/components/StatusBadge';
 import type { OrderStatus, Product } from '@/types';
 import { ChefHat, Clock, CheckCircle, Flame, User, Phone, CheckCircle2, Truck, Package, Plus, Trash2, Settings, Coffee, Upload, Utensils } from 'lucide-react';
+import { useNotificationStore } from '@/store/notificationStore';
 
 export default function RestaurantDashboard() {
   const { orders, fetchOrders, updateStatus } = useOrderStore();
   const { products, restaurant, fetchMenu, updateRestaurant, addProduct, deleteProduct } = useMenuStore();
+  const { addNotification } = useNotificationStore();
 
   const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'settings'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Plats', image: '🍽️' });
+  // Controlled state for Settings image field — avoids document.getElementById anti-pattern
+  const [settingsImage, setSettingsImage] = useState('');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (base64: string) => void) => {
     const file = e.target.files?.[0];
@@ -31,6 +35,11 @@ export default function RestaurantDashboard() {
     fetchMenu();
   }, [fetchOrders, fetchMenu]);
 
+  // Sync settingsImage when restaurant data loads
+  useEffect(() => {
+    if (restaurant) setSettingsImage(restaurant.image || '');
+  }, [restaurant]);
+
   const pendingOrders = orders.filter((o) => o.status === 'pending');
   const preparingOrders = orders.filter((o) => ['accepted', 'preparing'].includes(o.status));
   const readyOrders = orders.filter((o) => o.status === 'ready');
@@ -38,8 +47,9 @@ export default function RestaurantDashboard() {
   const completedOrders = orders.filter((o) => o.status === 'delivered');
 
   const handleAccept = async (orderId: number) => {
-    await updateStatus(orderId, 'accepted');
-    setTimeout(() => updateStatus(orderId, 'preparing'), 500);
+    // Go directly to 'preparing' — skips the intermediate 'accepted' state
+    // and eliminates the previous setTimeout race condition
+    await updateStatus(orderId, 'preparing');
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -395,25 +405,36 @@ export default function RestaurantDashboard() {
 
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                const form = e.currentTarget;
                 await updateRestaurant({
-                  name: (e.currentTarget.elements.namedItem('name') as HTMLInputElement).value,
-                  description: (e.currentTarget.elements.namedItem('description') as HTMLTextAreaElement).value,
-                  address: (e.currentTarget.elements.namedItem('address') as HTMLInputElement).value,
-                  image: (e.currentTarget.elements.namedItem('image_data') as HTMLInputElement).value,
+                  name: (form.elements.namedItem('name') as HTMLInputElement).value,
+                  description: (form.elements.namedItem('description') as HTMLTextAreaElement).value,
+                  address: (form.elements.namedItem('address') as HTMLInputElement).value,
+                  image: settingsImage,
                 });
-                alert('✅ Profil mis à jour avec succès !');
+                addNotification({
+                  type: 'info',
+                  title: 'Profil mis à jour',
+                  message: 'Les informations du restaurant ont été enregistrées.',
+                  icon: '✅',
+                  color: '#2ed573',
+                });
               }} style={{ padding: 'clamp(60px, 10vw, 80px) clamp(16px, 4vw, 40px) clamp(24px, 4vw, 40px)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
 
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Logo / Photo</label>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
-                    <input name="image_data" id="image_data" type="text" className="input" defaultValue={restaurant.image} placeholder="Lien ou Base64..." style={{ flex: 1, minWidth: '160px' }} />
+                    <input
+                      type="text"
+                      className="input"
+                      value={settingsImage}
+                      onChange={(e) => setSettingsImage(e.target.value)}
+                      placeholder="Lien URL ou Base64..."
+                      style={{ flex: 1, minWidth: '160px' }}
+                    />
                     <label className="btn btn-secondary" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                       <Upload size={16} /> Téléverser
-                      <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, (b) => {
-                        const input = document.getElementById('image_data') as HTMLInputElement;
-                        if (input) input.value = b;
-                      })} />
+                      <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, setSettingsImage)} />
                     </label>
                   </div>
                 </div>

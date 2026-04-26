@@ -179,24 +179,29 @@ export default function LandingPage() {
                             width: 'fit-content',
                         }}>
                             <div style={{ display: 'flex' }}>
-                                {[11, 12, 13].map((i, idx) => (
-                                    <img
-                                        key={i}
-                                        src={`https://i.pravatar.cc/80?img=${i}`}
-                                        style={{
-                                            width: '30px', height: '30px', borderRadius: '50%',
-                                            border: '2px solid var(--bg)',
-                                            marginLeft: idx > 0 ? '-10px' : '0',
-                                        }}
-                                        alt="user"
-                                    />
+                                {[
+                                    { initials: 'MK', color: '#ff4757' },
+                                    { initials: 'SA', color: '#1e90ff' },
+                                    { initials: 'AB', color: '#2ed573' },
+                                ].map((av, idx) => (
+                                    <div key={idx} style={{
+                                        width: '30px', height: '30px', borderRadius: '50%',
+                                        background: `linear-gradient(135deg, ${av.color}, ${av.color}88)`,
+                                        border: '2px solid var(--bg)',
+                                        marginLeft: idx > 0 ? '-10px' : '0',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '0.55rem', fontWeight: 900, color: 'white',
+                                        flexShrink: 0,
+                                    }}>
+                                        {av.initials}
+                                    </div>
                                 ))}
                             </div>
                             <div>
                                 <div style={{ display: 'flex', gap: '1px', marginBottom: '2px' }}>
                                     {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} color="#ffc048" fill="#ffc048" />)}
                                 </div>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>+10,000 utilisateurs actifs</span>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>+1 000 utilisateurs actifs</span>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import api from '@/lib/api';
+import { useNotificationStore } from '@/store/notificationStore';
 import {
   Users,
   Store,
@@ -26,7 +27,21 @@ interface Stats {
   revenue: number;
 }
 
+// Debounce hook — avoids re-filtering on every keystroke
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState<T>(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
+}
+
+// Normalize string for case-insensitive matching
+const normalize = (s: string | null | undefined) => (s ?? '').toLowerCase();
+
 export default function AdminDashboard() {
+  const { addNotification } = useNotificationStore();
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [restaurants, setRestaurants] = useState<any[]>([]);
@@ -34,6 +49,9 @@ export default function AdminDashboard() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'users' | 'restaurants' | 'orders' | 'reservations'>('users');
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,6 +79,55 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
+  // --- Filtered datasets (recomputed only when source data or search term changes) ---
+
+  const filteredUsers = useMemo(() => {
+    const q = normalize(debouncedSearch);
+    if (!q) return users;
+    return users.filter(u =>
+      normalize(u.name).includes(q) ||
+      normalize(u.email).includes(q) ||
+      normalize(u.role).includes(q) ||
+      String(u.id).includes(q)
+    );
+  }, [users, debouncedSearch]);
+
+  const filteredRestaurants = useMemo(() => {
+    const q = normalize(debouncedSearch);
+    if (!q) return restaurants;
+    return restaurants.filter(r =>
+      normalize(r.name).includes(q) ||
+      normalize(r.owner?.name).includes(q) ||
+      normalize(r.address).includes(q) ||
+      String(r.id).includes(q)
+    );
+  }, [restaurants, debouncedSearch]);
+
+  const filteredOrders = useMemo(() => {
+    const q = normalize(debouncedSearch);
+    if (!q) return orders;
+    return orders.filter(o =>
+      normalize(o.customer?.name).includes(q) ||
+      normalize(o.restaurant?.name).includes(q) ||
+      normalize(o.status).includes(q) ||
+      String(o.id).includes(q)
+    );
+  }, [orders, debouncedSearch]);
+
+  const filteredReservations = useMemo(() => {
+    const q = normalize(debouncedSearch);
+    if (!q) return reservations;
+    return reservations.filter(r =>
+      normalize(r.user?.name).includes(q) ||
+      normalize(r.place?.name).includes(q) ||
+      normalize(r.status).includes(q) ||
+      String(r.queueNumber).includes(q) ||
+      String(r.id).includes(q)
+    );
+  }, [reservations, debouncedSearch]);
+
+  // --- Action handlers ---
+
   const handleRoleChange = async (userId: number, currentRole: string) => {
     const newRole = currentRole === 'admin' ? 'client' : 'admin';
     const confirmMessage = newRole === 'admin'
@@ -77,9 +144,9 @@ export default function AdminDashboard() {
       );
 
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      alert(`Le rôle a été mis à jour avec succès : ${newRole}`);
+      addNotification({ type: 'info', title: 'Rôle mis à jour', message: `Nouveau rôle : ${newRole}`, icon: '✅', color: '#2ed573' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la mise à jour du rôle');
+      addNotification({ type: 'info', title: 'Erreur', message: err.response?.data?.message || 'Erreur lors de la mise à jour du rôle', icon: '❌', color: '#ff4757' });
     }
   };
 
@@ -89,9 +156,9 @@ export default function AdminDashboard() {
     try {
       await api.delete(`/admin/users/${userId}`);
       setUsers(users.filter(u => u.id !== userId));
-      alert(`L'utilisateur ${userName} a été supprimé.`);
+      addNotification({ type: 'info', title: 'Utilisateur supprimé', message: `${userName} a été supprimé.`, icon: '🗑️', color: '#ffc048' });
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur lors de la suppression');
+      addNotification({ type: 'info', title: 'Erreur', message: err.response?.data?.message || 'Erreur lors de la suppression', icon: '❌', color: '#ff4757' });
     }
   };
 
@@ -100,7 +167,7 @@ export default function AdminDashboard() {
       await api.put(`/reservations/${id}/status`, { status });
       setReservations(reservations.map(r => r.id === id ? { ...r, status } : r));
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur');
+      addNotification({ type: 'info', title: 'Erreur', message: err.response?.data?.message || 'Erreur', icon: '❌', color: '#ff4757' });
     }
   };
 
@@ -118,6 +185,14 @@ export default function AdminDashboard() {
     { key: 'orders' as const, label: 'Commandes', icon: <ShoppingBag size={16} /> },
     { key: 'reservations' as const, label: 'Réservations', icon: <ClipboardList size={16} /> },
   ];
+
+  // Map each tab to its filtered result count for the empty-state row
+  const activeCount = {
+    users: filteredUsers.length,
+    restaurants: filteredRestaurants.length,
+    orders: filteredOrders.length,
+    reservations: filteredReservations.length,
+  }[activeTab];
 
   return (
     <div className="fade-in">
@@ -158,12 +233,16 @@ export default function AdminDashboard() {
       {/* CONTENT TABLE */}
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-          <h3 style={{ textTransform: 'capitalize', fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)' }}>Liste des {activeTab === 'orders' ? 'commandes' : activeTab === 'reservations' ? 'réservations' : activeTab}</h3>
+          <h3 style={{ textTransform: 'capitalize', fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)' }}>
+            Liste des {activeTab === 'orders' ? 'commandes' : activeTab === 'reservations' ? 'réservations' : activeTab}
+          </h3>
           <div style={{ position: 'relative' }}>
             <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="text"
               placeholder="Rechercher..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
               style={{ padding: '7px 10px 7px 34px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text)', fontSize: '0.82rem', width: 'clamp(120px, 30vw, 200px)' }}
             />
           </div>
@@ -208,7 +287,16 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-              {activeTab === 'users' && users.map(user => (
+              {/* Empty state when search yields no results */}
+              {activeCount === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    {debouncedSearch ? `Aucun résultat pour « ${debouncedSearch} »` : 'Aucune donnée disponible'}
+                  </td>
+                </tr>
+              )}
+
+              {activeTab === 'users' && filteredUsers.map(user => (
                 <tr key={user.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem' }}>#{user.id}</td>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 600 }}>{user.name}</td>
@@ -237,7 +325,8 @@ export default function AdminDashboard() {
                   </td>
                 </tr>
               ))}
-              {activeTab === 'restaurants' && restaurants.map(rest => (
+
+              {activeTab === 'restaurants' && filteredRestaurants.map(rest => (
                 <tr key={rest.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem' }}>#{rest.id}</td>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 600 }}>{rest.name}</td>
@@ -246,7 +335,8 @@ export default function AdminDashboard() {
                   <td style={{ padding: '12px 16px' }}><button className="btn btn-sm btn-secondary">Voir</button></td>
                 </tr>
               ))}
-              {activeTab === 'orders' && orders.map(order => (
+
+              {activeTab === 'orders' && filteredOrders.map(order => (
                 <tr key={order.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem' }}>#{order.id}</td>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 600 }}>{order.customer?.name}</td>
@@ -256,7 +346,8 @@ export default function AdminDashboard() {
                   <td style={{ padding: '12px 16px' }}><button className="btn btn-sm btn-secondary">Détails</button></td>
                 </tr>
               ))}
-              {activeTab === 'reservations' && reservations.map(res => (
+
+              {activeTab === 'reservations' && filteredReservations.map(res => (
                 <tr key={res.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem' }}>#{res.id}</td>
                   <td style={{ padding: '12px 16px', fontSize: '0.85rem', fontWeight: 600 }}>{res.user?.name}</td>

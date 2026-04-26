@@ -13,13 +13,26 @@ const reservationRoutes = require('./routes/reservationRoutes');
 const app = express();
 const server = http.createServer(app);
 
-// NOTE: In production, origin should be Restricted to the Frontend URL
-// e.g., const io = new Server(server, { cors: { origin: process.env.FRONTEND_URL } });
+// Allowed origins: frontend URL from env, plus localhost for dev
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001']
+  : ['http://localhost:3000', 'http://localhost:3001'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile APK, Postman, curl)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin not allowed — ${origin}`));
+  },
+  credentials: true,
+};
+
+// Socket.io keeps open origin for mobile APK compatibility
 const io = new Server(server, { cors: { origin: '*' } });
 
-app.use(cors()); // TODO: Restrict for production
-app.use(express.json({ limit: '50mb' })); // Increased limit for Base64 image payloads
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Routes
 app.use('/api/auth', authRoutes);

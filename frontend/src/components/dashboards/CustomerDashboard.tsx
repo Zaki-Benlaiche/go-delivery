@@ -5,7 +5,7 @@ import { useOrderStore } from '@/store/orderStore';
 import StatusBadge from '@/components/StatusBadge';
 import api from '@/lib/api';
 import type { Restaurant, Product, OrderStatus } from '@/types';
-import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, Star, ChevronLeft, Navigation, Phone, ChefHat, User, X, ShoppingCart, ClipboardList, Users, XCircle, CheckCircle, Truck } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, ChevronLeft, Navigation, Phone, ChefHat, User, X, ShoppingCart, ClipboardList, Users, XCircle, CheckCircle, Truck } from 'lucide-react';
 
 interface PlaceWithQueue {
   id: number; name: string; type: string; address: string; description: string; icon: string; waitingCount: number;
@@ -29,6 +29,7 @@ export default function CustomerDashboard() {
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   const [appMode, setAppMode] = useState<'delivery' | 'reservation'>('delivery');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
 
   const [places, setPlaces] = useState<PlaceWithQueue[]>([]);
   const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
@@ -47,12 +48,20 @@ export default function CustomerDashboard() {
       setMyReservations(reservationsRes.data);
 
       const active = reservationsRes.data.filter((r: MyReservation) => r.status === 'waiting' || r.status === 'called');
+      // Parallel fetch — avoids sequential N+1 API calls
+      const queueResults = await Promise.all(
+        active.map(async (res: MyReservation) => {
+          try {
+            const qi = await api.get(`/reservations/queue/${res.id}`);
+            return [res.id, qi.data] as const;
+          } catch {
+            return [res.id, null] as const;
+          }
+        })
+      );
       const queueInfos: Record<number, QueueInfo> = {};
-      for (const res of active) {
-        try {
-          const qi = await api.get(`/reservations/queue/${res.id}`);
-          queueInfos[res.id] = qi.data;
-        } catch { /* ignore */ }
+      for (const [id, info] of queueResults) {
+        if (info) queueInfos[id] = info;
       }
       setQueueInfoMap(queueInfos);
     } catch (err) {
@@ -137,8 +146,9 @@ export default function CustomerDashboard() {
       productId: Number(productId),
       quantity,
     }));
-    await createOrder(selectedRestaurant.id, items, 'Ma Position Actuelle');
+    await createOrder(selectedRestaurant.id, items, deliveryAddress.trim() || 'Adresse non précisée');
     setCart({});
+    setDeliveryAddress('');
     setSelectedRestaurant(null);
     setIsOrdering(false);
     setActiveTab('orders');
@@ -206,6 +216,26 @@ export default function CustomerDashboard() {
               <span style={{ fontWeight: 600 }}>Total</span>
               <span style={{ fontSize: 'clamp(1.3rem, 4vw, 1.7rem)', fontWeight: 900, color: 'white', lineHeight: 1 }}>{cartTotal + 200} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>DA</span></span>
             </div>
+          </div>
+
+          {/* Delivery address input */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
+              Adresse de livraison
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Rue des Lilas, Appt 3B, Alger..."
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: '8px',
+                border: `1px solid ${deliveryAddress ? 'var(--primary)' : 'var(--border)'}`,
+                background: 'var(--bg-elevated)', color: 'var(--text)',
+                fontSize: '0.85rem', fontFamily: 'inherit', outline: 'none',
+                boxSizing: 'border-box', transition: 'border-color 0.2s',
+              }}
+            />
           </div>
 
           <div style={{ background: 'var(--info-glow)', color: '#1e90ff', padding: '10px', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', gap: '6px', marginBottom: '20px', alignItems: 'center' }}>
@@ -353,19 +383,15 @@ export default function CustomerDashboard() {
                       </div>
                     </div>
                     <div style={{ padding: 'clamp(14px, 3vw, 20px)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '6px', gap: '8px' }}>
-                        <h3 style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.2rem)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</h3>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'var(--success-glow)', color: 'var(--success)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.78rem', fontWeight: 800, flexShrink: 0 }}>
-                          <Star size={11} fill="currentColor" /> 4.8
-                        </div>
-                      </div>
+                      <h3 style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.2rem)', margin: '0 0 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</h3>
                       <p style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <MapPin size={12} /> {r.address}
                       </p>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.7rem', background: 'var(--bg)', padding: '3px 8px', borderRadius: '10px', border: '1px solid var(--border)' }}>Fast Food</span>
-                        <span style={{ fontSize: '0.7rem', background: 'var(--bg)', padding: '3px 8px', borderRadius: '10px', border: '1px solid var(--border)' }}>Livraison Rapide</span>
-                      </div>
+                      {r.description && (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', opacity: 0.7, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -400,8 +426,6 @@ export default function CustomerDashboard() {
                   <h1 style={{ fontSize: 'clamp(1.1rem, 3vw, 2rem)', marginBottom: '6px', fontWeight: 900, wordBreak: 'break-word' }}>{selectedRestaurant.name}</h1>
                   <p style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.9, fontSize: 'clamp(0.78rem, 2vw, 1rem)', marginBottom: '10px', flexWrap: 'wrap' }}>
                     <MapPin size={14} /> {selectedRestaurant.address}
-                    <span style={{ opacity: 0.3 }}>|</span>
-                    <Star size={14} color="var(--accent)" fill="var(--accent)" /> 4.8
                   </p>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ background: 'var(--success)', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700 }}>Ouvert</span>
