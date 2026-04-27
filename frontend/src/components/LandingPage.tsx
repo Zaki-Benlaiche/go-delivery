@@ -45,7 +45,7 @@ export default function LandingPage() {
                 transition: 'all 0.3s ease',
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img src="/logo.svg" alt="Réserve-vite" style={{
+                    <img src="/icon.png" alt="Réserve-vite" style={{
                         width: '34px', height: '34px', borderRadius: '10px',
                     }} />
                     <span style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
