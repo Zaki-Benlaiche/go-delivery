@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5714"/>
+      <stop offset="100%" stop-color="#C1121F"/>
+    </linearGradient>
+    <radialGradient id="topShine" cx="30%" cy="20%" r="55%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.22)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="11" flood-color="rgba(0,0,0,0.24)"/>
+    </filter>
+    <filter id="badgeShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+
+  <!-- ── Background rounded square ── -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="512" height="512" rx="112" fill="url(#topShine)"/>
+
+  <!-- ── Speed / motion lines (behind scooter) ── -->
+  <line x1="46" y1="252" x2="126" y2="252" stroke="rgba(255,255,255,0.45)" stroke-width="8"  stroke-linecap="round"/>
+  <line x1="60" y1="274" x2="122" y2="274" stroke="rgba(255,255,255,0.30)" stroke-width="6"  stroke-linecap="round"/>
+  <line x1="78" y1="296" x2="118" y2="296" stroke="rgba(255,255,255,0.18)" stroke-width="4"  stroke-linecap="round"/>
+
+  <!-- ════════════════════════════════
+       DELIVERY SCOOTER  (all white)
+       ════════════════════════════════ -->
+  <g filter="url(#iconShadow)">
+
+    <!-- Rear wheel -->
+    <circle cx="370" cy="336" r="59" fill="none" stroke="white" stroke-width="22"/>
+    <circle cx="370" cy="336" r="12" fill="white"/>
+
+    <!-- Front wheel -->
+    <circle cx="160" cy="336" r="52" fill="none" stroke="white" stroke-width="20"/>
+    <circle cx="160" cy="336" r="10" fill="white"/>
+
+    <!-- Rear fork / suspension strut -->
+    <line x1="366" y1="280" x2="370" y2="336" stroke="white" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- Front fork / suspension strut -->
+    <line x1="168" y1="280" x2="160" y2="336" stroke="white" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- ── Main scooter body ── -->
+    <path d="
+      M 168 280
+      L 168 242
+      C 180 212 218 198 252 194
+      C 282 190 312 188 332 192
+      L 352 198
+      C 368 208 374 227 374 250
+      L 374 280
+      L 308 286
+      L 190 286
+      Z
+    " fill="white"/>
+
+    <!-- Fork upper stem (connects body front to handlebar) -->
+    <rect x="159" y="240" width="18" height="42" rx="8" fill="white"/>
+
+    <!-- Handlebar horizontal bar -->
+    <rect x="118" y="222" width="78" height="16" rx="8" fill="white"/>
+    <!-- Left grip -->
+    <rect x="116" y="207" width="16" height="28" rx="8" fill="white"/>
+
+    <!-- ── Rider silhouette ── -->
+    <!-- Torso -->
+    <ellipse cx="294" cy="180" rx="32" ry="46" fill="white"/>
+    <!-- Head + helmet -->
+    <circle cx="302" cy="132" r="30" fill="white"/>
+    <!-- Helmet visor (subtle tint) -->
+    <path d="M 278 128 Q 302 114 326 126"
+          fill="none" stroke="rgba(170,50,0,0.28)" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- ── Delivery box on rear rack ── -->
+    <rect x="334" y="152" width="68" height="60" rx="7" fill="white"/>
+    <!-- Ribbon horizontal -->
+    <rect x="334" y="177" width="68" height="9" rx="4" fill="rgba(255,87,20,0.28)"/>
+    <!-- Ribbon vertical -->
+    <rect x="364" y="152" width="9" height="60" rx="4" fill="rgba(255,87,20,0.28)"/>
+    <!-- Bow knot -->
+    <circle cx="368.5" cy="181.5" r="7" fill="rgba(255,87,20,0.38)"/>
+
+    <!-- Headlight -->
+    <circle cx="153" cy="272" r="14" fill="white"/>
+    <circle cx="153" cy="272" r="8"  fill="rgba(255,215,80,0.78)"/>
+
+  </g>
+
+  <!-- ════════════════════════════════
+       BOOKING CALENDAR BADGE
+       (bottom-right corner)
+       ════════════════════════════════ -->
+  <g filter="url(#badgeShadow)">
+    <!-- White circle background -->
+    <circle cx="418" cy="418" r="50" fill="white"/>
+
+    <!-- Calendar body -->
+    <rect x="395" y="404" width="46" height="36" rx="5" fill="url(#bgGrad)"/>
+    <!-- Calendar header bar -->
+    <rect x="395" y="395" width="46" height="15" rx="5" fill="#C1121F"/>
+    <!-- Ring tabs -->
+    <rect x="403" y="389" width="8" height="13" rx="4" fill="white"/>
+    <rect x="421" y="389" width="8" height="13" rx="4" fill="white"/>
+
+    <!-- Day dots — row 1 -->
+    <circle cx="404" cy="415" r="3.5" fill="white"/>
+    <circle cx="418" cy="415" r="3.5" fill="white"/>
+    <circle cx="432" cy="415" r="3.5" fill="white"/>
+    <!-- Day dots — row 2 -->
+    <circle cx="404" cy="428" r="3.5" fill="white"/>
+    <circle cx="418" cy="428" r="3.5" fill="white"/>
+    <circle cx="432" cy="428" r="3.5" fill="white"/>
+  </g>
+
+</svg>
