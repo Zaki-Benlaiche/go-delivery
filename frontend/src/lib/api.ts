@@ -3,13 +3,18 @@ import axios from 'axios';
 // Detect if we're running locally or in production
 const getApiUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  
+
   if (typeof window !== 'undefined') {
+    // Capacitor APK runs on localhost but must reach the real server
+    if ((window as any).Capacitor?.isNative) {
+      return 'https://go-delivery-1.onrender.com/api';
+    }
+
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:3001/api';
     }
   }
-  
+
   return 'https://go-delivery-1.onrender.com/api';
 };
 
