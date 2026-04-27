@@ -6,7 +6,7 @@ const { authMiddleware } = require('../middleware/auth');
 // In-memory rate limiter — no external dependency required
 const loginAttempts = new Map();
 const WINDOW_MS = 15 * 60 * 1000; // 15-minute sliding window
-const MAX_ATTEMPTS = 10;
+const MAX_ATTEMPTS = 50;
 
 const rateLimitLogin = (req, res, next) => {
   const ip = req.ip || req.socket?.remoteAddress || 'unknown';
