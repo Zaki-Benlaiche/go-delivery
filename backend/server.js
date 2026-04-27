@@ -140,7 +140,7 @@ const seedDatabase = async () => {
 // Start Server
 const PORT = process.env.PORT || 3001;
 
-sequelize.sync({ force: false }).then(async () => {
+sequelize.sync({ alter: true }).then(async () => {
   await seedDatabase();
   server.listen(PORT, () => {
     console.log(`🚀 GO-DELIVERY Backend running on http://localhost:${PORT}`);

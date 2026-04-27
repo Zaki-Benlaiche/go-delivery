@@ -73,8 +73,24 @@ exports.updateUserRole = async (req, res) => {
     const user = await User.findByPk(id);
     if (!user) return res.status(404).json({ message: 'User not found.' });
 
+    const oldRole = user.role;
     user.role = role;
     await user.save();
+
+    // Auto-create Restaurant or Place when role changes to those types
+    if (role === 'restaurant' && oldRole !== 'restaurant') {
+      const existing = await Restaurant.findOne({ where: { userId: user.id } });
+      if (!existing) {
+        await Restaurant.create({ name: `${user.name}'s Restaurant`, userId: user.id });
+      }
+    }
+
+    if (role === 'place' && oldRole !== 'place') {
+      const existing = await Place.findOne({ where: { userId: user.id } });
+      if (!existing) {
+        await Place.create({ name: user.name, type: 'other', address: '', description: '', icon: '🏢', userId: user.id });
+      }
+    }
 
     res.json({ message: `User ${user.name} is now ${role}.`, user: { id: user.id, name: user.name, role: user.role } });
   } catch (err) {
