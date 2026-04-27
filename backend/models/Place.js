@@ -28,7 +28,11 @@ const Place = sequelize.define('Place', {
     userId: {
         type: DataTypes.INTEGER,
         allowNull: true,
-    }
+    },
+    isOpen: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
 });
 
 module.exports = Place;

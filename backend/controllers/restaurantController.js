@@ -63,6 +63,18 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
+exports.toggleOpenStatus = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOne({ where: { userId: req.user.id } });
+    if (!restaurant) return res.status(404).json({ message: 'Restaurant not found.' });
+
+    await restaurant.update({ isOpen: !restaurant.isOpen });
+    res.json({ isOpen: restaurant.isOpen });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error.', error: err.message });
+  }
+};
+
 exports.deleteProduct = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOne({ where: { userId: req.user.id } });

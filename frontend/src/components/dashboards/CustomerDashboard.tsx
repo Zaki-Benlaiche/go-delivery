@@ -8,7 +8,7 @@ import type { Restaurant, Product, OrderStatus } from '@/types';
 import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, ChevronLeft, Navigation, Phone, ChefHat, User, X, ShoppingCart, ClipboardList, Users, XCircle, CheckCircle, Truck } from 'lucide-react';
 
 interface PlaceWithQueue {
-  id: number; name: string; type: string; address: string; description: string; icon: string; waitingCount: number;
+  id: number; name: string; type: string; address: string; description: string; icon: string; waitingCount: number; isOpen: boolean;
 }
 interface MyReservation {
   id: number; queueNumber: number; status: string; date: string; estimatedWaitMinutes: number;
@@ -378,6 +378,11 @@ export default function CustomerDashboard() {
                       <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '5px', borderRadius: '50%', color: 'white' }}>
                         <Heart size={15} />
                       </div>
+                      {/* Open / Closed badge */}
+                      <div style={{ position: 'absolute', top: '12px', left: '12px', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', background: r.isOpen ? 'rgba(46,213,115,0.9)' : 'rgba(255,71,87,0.9)', color: 'white', backdropFilter: 'blur(4px)' }}>
+                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'white', display: 'inline-block' }} />
+                        {r.isOpen ? 'Ouvert' : 'Fermé'}
+                      </div>
                       <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'var(--bg-card)', padding: '5px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Clock size={11} color="var(--primary)" /> 30-40 min
                       </div>
@@ -735,13 +740,18 @@ export default function CustomerDashboard() {
               {places.map(place => {
                 const hasActive = activeReservations.some(r => r.place?.id === place.id);
                 return (
-                  <div key={place.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div key={place.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', opacity: place.isOpen ? 1 : 0.75 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div className="icon-box icon-box-md" style={{ background: 'var(--info-glow)', fontSize: '1.3rem', flexShrink: 0 }}>{place.icon}</div>
-                      <div style={{ minWidth: 0 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{place.name}</div>
                         <div style={{ fontSize: '0.72rem', opacity: 0.5 }}>{typeLabels[place.type] || place.type}</div>
                       </div>
+                      {/* Open / Closed badge */}
+                      <span style={{ padding: '3px 9px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', background: place.isOpen ? 'rgba(46,213,115,0.15)' : 'rgba(255,71,87,0.15)', color: place.isOpen ? '#2ed573' : '#ff4757', border: `1px solid ${place.isOpen ? 'rgba(46,213,115,0.4)' : 'rgba(255,71,87,0.4)'}`, flexShrink: 0 }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: place.isOpen ? '#2ed573' : '#ff4757', display: 'inline-block' }} />
+                        {place.isOpen ? 'Ouvert' : 'Fermé'}
+                      </span>
                     </div>
                     <p style={{ opacity: 0.7, fontSize: '0.8rem', margin: 0, wordBreak: 'break-word' }}>{place.description}</p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', opacity: 0.5 }}>
@@ -750,17 +760,17 @@ export default function CustomerDashboard() {
                     </div>
                     <button
                       onClick={() => bookSpot(place.id)}
-                      disabled={hasActive || bookingPlaceId === place.id}
+                      disabled={!place.isOpen || hasActive || bookingPlaceId === place.id}
                       className="btn btn-block"
                       style={{
                         padding: '10px', borderRadius: '10px',
                         fontWeight: 700, fontSize: '0.85rem',
-                        cursor: hasActive ? 'not-allowed' : 'pointer',
-                        background: hasActive ? 'rgba(255,255,255,0.05)' : '#1e90ff',
-                        color: hasActive ? 'var(--text-muted)' : 'white',
+                        cursor: (!place.isOpen || hasActive) ? 'not-allowed' : 'pointer',
+                        background: !place.isOpen ? 'rgba(255,71,87,0.1)' : hasActive ? 'rgba(255,255,255,0.05)' : '#1e90ff',
+                        color: !place.isOpen ? '#ff4757' : hasActive ? 'var(--text-muted)' : 'white',
                       }}
                     >
-                      {hasActive ? (<><CheckCircle size={14} /> Déjà réservé</>) : bookingPlaceId === place.id ? 'Réservation...' : (<><ClipboardList size={14} /> Prendre un numéro</>)}
+                      {!place.isOpen ? (<><XCircle size={14} /> Fermé actuellement</>) : hasActive ? (<><CheckCircle size={14} /> Déjà réservé</>) : bookingPlaceId === place.id ? 'Réservation...' : (<><ClipboardList size={14} /> Prendre un numéro</>)}
                     </button>
                   </div>
                 );

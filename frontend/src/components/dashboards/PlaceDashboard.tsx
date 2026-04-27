@@ -15,7 +15,7 @@ interface PlaceReservation {
 }
 
 interface PlaceInfo {
-    id: number; name: string; type: string; address: string; description: string; icon: string;
+    id: number; name: string; type: string; address: string; description: string; icon: string; isOpen: boolean;
 }
 
 export default function PlaceDashboard() {
@@ -50,6 +50,15 @@ export default function PlaceDashboard() {
         }
     };
 
+    const toggleOpenStatus = async () => {
+        try {
+            const res = await api.put('/my-place/open-status');
+            setPlace(prev => prev ? { ...prev, isOpen: res.data.isOpen } : prev);
+        } catch (err) {
+            console.error('Error toggling status:', err);
+        }
+    };
+
     const today = new Date().toISOString().split('T')[0];
     const todayReservations = reservations.filter(r => r.date === today);
     const waiting = todayReservations.filter(r => r.status === 'waiting');
@@ -76,10 +85,26 @@ export default function PlaceDashboard() {
                     <div className="icon-box icon-box-lg" style={{ background: 'rgba(255,255,255,0.15)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', flexShrink: 0 }}>
                         {place?.icon || <ClipboardList size={28} />}
                     </div>
-                    <div style={{ minWidth: 0 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
                         <h1 style={{ fontSize: 'clamp(1.2rem, 4vw, 1.7rem)', fontWeight: 900, margin: 0, wordBreak: 'break-word' }}>{place?.name}</h1>
                         <p style={{ opacity: 0.85, margin: '4px 0 0', fontSize: 'clamp(0.78rem, 2vw, 0.95rem)', wordBreak: 'break-word' }}>{place?.address} — {place?.description}</p>
                     </div>
+                    {/* Open / Closed Toggle */}
+                    <button
+                        onClick={toggleOpenStatus}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '10px 22px', borderRadius: '50px', border: '2px solid rgba(255,255,255,0.3)',
+                            fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+                            transition: 'all 0.2s', flexShrink: 0,
+                            background: place?.isOpen ? 'rgba(46,213,115,0.25)' : 'rgba(255,71,87,0.25)',
+                            color: 'white',
+                            backdropFilter: 'blur(4px)',
+                        }}
+                    >
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: place?.isOpen ? '#2ed573' : '#ff4757', display: 'inline-block', boxShadow: place?.isOpen ? '0 0 8px #2ed573' : '0 0 8px #ff4757' }} />
+                        {place?.isOpen ? 'Ouvert' : 'Fermé'}
+                    </button>
                 </div>
             </div>
 

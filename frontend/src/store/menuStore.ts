@@ -8,6 +8,7 @@ interface MenuState {
   isLoading: boolean;
   fetchMenu: () => Promise<void>;
   updateRestaurant: (data: Partial<Restaurant>) => Promise<void>;
+  toggleOpenStatus: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id' | 'restaurantId'>) => Promise<void>;
   updateProduct: (id: number, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
@@ -44,6 +45,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ restaurant: data });
     } catch (err) {
       console.error('updateRestaurant error:', err);
+    }
+  },
+
+  toggleOpenStatus: async () => {
+    try {
+      const { data } = await api.put('/restaurants/open-status');
+      set((state) => ({
+        restaurant: state.restaurant ? { ...state.restaurant, isOpen: data.isOpen } : null,
+      }));
+    } catch (err) {
+      console.error('toggleOpenStatus error:', err);
     }
   },
 

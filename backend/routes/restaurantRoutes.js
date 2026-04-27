@@ -6,6 +6,7 @@ const { authMiddleware } = require('../middleware/auth');
 router.get('/', restaurantController.getAllRestaurants);
 router.get('/:id', restaurantController.getRestaurantById);
 router.put('/mine', authMiddleware, restaurantController.updateRestaurant);
+router.put('/open-status', authMiddleware, restaurantController.toggleOpenStatus);
 router.post('/products', authMiddleware, restaurantController.addProduct);
 router.put('/products/:id', authMiddleware, restaurantController.updateProduct);
 router.delete('/products/:id', authMiddleware, restaurantController.deleteProduct);

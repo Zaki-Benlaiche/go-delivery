@@ -10,7 +10,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 
 export default function RestaurantDashboard() {
   const { orders, fetchOrders, updateStatus } = useOrderStore();
-  const { products, restaurant, fetchMenu, updateRestaurant, addProduct, deleteProduct } = useMenuStore();
+  const { products, restaurant, fetchMenu, updateRestaurant, toggleOpenStatus, addProduct, deleteProduct } = useMenuStore();
   const { addNotification } = useNotificationStore();
 
   const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'settings'>('orders');
@@ -83,7 +83,24 @@ export default function RestaurantDashboard() {
           </h1>
           <p className="page-subtitle">Gérez vos commandes et votre menu en temps réel</p>
         </div>
-        <div className="tab-bar" style={{ background: 'var(--bg-elevated)', padding: '5px', borderRadius: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+          {/* Open / Closed Toggle */}
+          <button
+            onClick={toggleOpenStatus}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '10px 20px', borderRadius: '50px', border: 'none',
+              fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+              transition: 'all 0.2s',
+              background: restaurant?.isOpen ? 'linear-gradient(135deg,#2ed573,#17a348)' : 'linear-gradient(135deg,#ff4757,#c0392b)',
+              color: 'white',
+              boxShadow: restaurant?.isOpen ? '0 4px 16px rgba(46,213,115,0.4)' : '0 4px 16px rgba(255,71,87,0.4)',
+            }}
+          >
+            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'rgba(255,255,255,0.9)', display: 'inline-block', boxShadow: '0 0 6px rgba(255,255,255,0.8)' }} />
+            {restaurant?.isOpen ? 'Ouvert' : 'Fermé'}
+          </button>
+          <div className="tab-bar" style={{ background: 'var(--bg-elevated)', padding: '5px', borderRadius: '12px' }}>
           {tabs.map(t => (
             <button
               key={t.key}
@@ -93,6 +110,7 @@ export default function RestaurantDashboard() {
               {t.icon} {t.label}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

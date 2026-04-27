@@ -203,7 +203,20 @@ exports.getPlacesWithQueue = async (req, res) => {
     }
 };
 
-// 10. Update place info (owner or admin)
+// 10. Place Owner: Toggle open/closed status
+exports.togglePlaceOpenStatus = async (req, res) => {
+    try {
+        const place = await Place.findOne({ where: { userId: req.user.id } });
+        if (!place) return res.status(404).json({ message: 'Place not found.' });
+
+        await place.update({ isOpen: !place.isOpen });
+        res.json({ isOpen: place.isOpen });
+    } catch (error) {
+        res.status(500).json({ message: 'Error toggling place status', error: error.message });
+    }
+};
+
+// 11. Update place info (owner or admin)
 exports.updatePlace = async (req, res) => {
     try {
         const { id } = req.params;

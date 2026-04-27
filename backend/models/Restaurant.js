@@ -27,6 +27,10 @@ const Restaurant = sequelize.define('Restaurant', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
+  isOpen: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 });
 
 module.exports = Restaurant;

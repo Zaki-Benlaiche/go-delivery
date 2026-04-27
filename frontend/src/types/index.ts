@@ -16,8 +16,20 @@ export interface Restaurant {
   address: string;
   category?: string;
   isActive: boolean;
+  isOpen: boolean;
   userId: number;
   products?: Product[];
+}
+
+export interface Place {
+  id: number;
+  name: string;
+  type: string;
+  address: string;
+  description: string;
+  icon: string;
+  isOpen: boolean;
+  userId?: number;
 }
 
 export interface Product {

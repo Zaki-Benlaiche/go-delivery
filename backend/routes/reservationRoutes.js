@@ -16,6 +16,7 @@ router.put('/reservations/:id/status', authMiddleware, reservationController.upd
 
 // Place owner routes
 router.get('/reservations/my-place', authMiddleware, reservationController.getMyPlaceReservations);
+router.put('/my-place/open-status', authMiddleware, reservationController.togglePlaceOpenStatus);
 router.put('/places/:id', authMiddleware, reservationController.updatePlace);
 
 module.exports = router;
