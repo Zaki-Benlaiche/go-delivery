@@ -1,47 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#ff4757"/>
+    <!-- Gradient covers full canvas so both bg and inner circle share same colours -->
+    <linearGradient id="grad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#ff4757"/>
       <stop offset="100%" stop-color="#ffc048"/>
     </linearGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
-    </linearGradient>
+
+    <!-- Soft drop-shadow for the white pin -->
+    <filter id="pinShadow" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="rgba(0,0,0,0.18)"/>
+    </filter>
   </defs>
 
-  <!-- Background rounded square -->
-  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- ── Background rounded square ── -->
+  <rect width="512" height="512" rx="112" fill="url(#grad)"/>
 
-  <!-- Subtle top shine overlay -->
-  <rect width="512" height="256" rx="112" fill="url(#shine)"/>
+  <!-- Subtle top-left highlight for depth -->
+  <rect width="512" height="512" rx="112"
+        fill="url(#topShine)"
+        opacity="0.08"/>
 
-  <!-- ===== FORK (left, centered at x=162) ===== -->
-
-  <!-- 3 tines -->
-  <rect x="121" y="106" width="15" height="92" rx="7.5" fill="white"/>
-  <rect x="154" y="106" width="15" height="92" rx="7.5" fill="white"/>
-  <rect x="187" y="106" width="15" height="92" rx="7.5" fill="white"/>
-
-  <!-- Bridge below tines -->
-  <rect x="121" y="182" width="81" height="15" rx="7.5" fill="white"/>
-
-  <!-- Handle (centered: (121+7.5+187+7.5)/2 = 162, so x=154.5≈155) -->
-  <rect x="154" y="191" width="15" height="218" rx="7.5" fill="white"/>
-
-  <!-- ===== LIGHTNING BOLT (right, centered ~x=352) ===== -->
-  <!--
-    Polygon vertices (clockwise from top-right):
-      395,106  — top right
-      330,275  — waist left (upper bolt goes down-left)
-      372,275  — waist right (horizontal step)
-      298,409  — bottom tip
-      407,248  — right side going up
-      362,248  — inner right step
+  <!-- ── White location pin ──
+       Circle centre (256, 210) radius 140.
+       Tangent points at (171, 321) and (341, 321).
+       Bezier tail converging to tip (256, 440).
   -->
-  <polygon
-    points="395,106 330,275 372,275 298,409 407,248 362,248"
+  <path
+    d="M 256 70
+       A 140 140 0 0 1 341 321
+       Q 312 405 256 444
+       Q 200 405 171 321
+       A 140 140 0 0 1 256 70 Z"
     fill="white"
+    filter="url(#pinShadow)"
   />
 
+  <!-- ── Inner circle: same gradient ⇒ looks like a transparent "window" in the pin ── -->
+  <circle cx="256" cy="210" r="100" fill="url(#grad)"/>
+
+  <!-- ── White fork inside the gradient circle ──
+       3 tines  y 148→220  (72 px tall)
+       Bridge   y 211→222  (11 px)
+       Handle   y 216→305  (89 px)
+       All centred at x 255.5 ≈ 256
+  -->
+  <!-- Tine 1 -->
+  <rect x="228" y="148" width="11" height="72" rx="5.5" fill="white"/>
+  <!-- Tine 2 (centre) -->
+  <rect x="250" y="148" width="11" height="72" rx="5.5" fill="white"/>
+  <!-- Tine 3 -->
+  <rect x="272" y="148" width="11" height="72" rx="5.5" fill="white"/>
+  <!-- Bridge -->
+  <rect x="228" y="211" width="55" height="11" rx="5.5" fill="white"/>
+  <!-- Handle -->
+  <rect x="250" y="216" width="11" height="89" rx="5.5" fill="white"/>
 </svg>
