@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '@/lib/api';
-import { Phone, CheckCircle, XCircle, Clock, Users, ClipboardList, TrendingUp, RefreshCw } from 'lucide-react';
+import { getSocket } from '@/lib/socket';
+import { Phone, CheckCircle, XCircle, Clock, Users, ClipboardList, TrendingUp, RefreshCw, Edit2, Save } from 'lucide-react';
 
 interface PlaceReservation {
     id: number;
     queueNumber: number;
+    peopleBefore: number;
     status: string;
     date: string;
     estimatedWaitMinutes: number;
@@ -22,6 +24,8 @@ export default function PlaceDashboard() {
     const [place, setPlace] = useState<PlaceInfo | null>(null);
     const [reservations, setReservations] = useState<PlaceReservation[]>([]);
     const [loading, setLoading] = useState(true);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editValues, setEditValues] = useState<{ queueNumber: string; peopleBefore: string; estimatedWaitMinutes: string }>({ queueNumber: '', peopleBefore: '', estimatedWaitMinutes: '' });
 
     const fetchData = useCallback(async () => {
         try {
@@ -37,16 +41,58 @@ export default function PlaceDashboard() {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 5000);
-        return () => clearInterval(interval);
+
+        // Real-time updates instead of 5s polling.
+        const socket = getSocket();
+        const onCreated = (r: PlaceReservation) => {
+            setReservations(prev => prev.some(x => x.id === r.id) ? prev : [r, ...prev]);
+        };
+        const onUpdated = (r: PlaceReservation) => {
+            setReservations(prev => prev.map(x => x.id === r.id ? { ...x, ...r } : x));
+        };
+        socket?.on('reservation_created', onCreated);
+        socket?.on('reservation_updated', onUpdated);
+
+        return () => {
+            socket?.off('reservation_created', onCreated);
+            socket?.off('reservation_updated', onUpdated);
+        };
     }, [fetchData]);
 
     const updateStatus = async (id: number, status: string) => {
+        // Optimistic update — no waiting on the server before the row reflects the change.
+        setReservations(prev => prev.map(r => r.id === id ? { ...r, status } : r));
         try {
             await api.put(`/reservations/${id}/status`, { status });
-            setReservations(prev => prev.map(r => r.id === id ? { ...r, status } : r));
         } catch (err) {
             console.error('Error updating:', err);
+            fetchData();
+        }
+    };
+
+    const beginEdit = (r: PlaceReservation) => {
+        setEditingId(r.id);
+        setEditValues({
+            queueNumber: String(r.queueNumber ?? ''),
+            peopleBefore: String(r.peopleBefore ?? 0),
+            estimatedWaitMinutes: String(r.estimatedWaitMinutes ?? 0),
+        });
+    };
+
+    const saveEdit = async (id: number) => {
+        const payload = {
+            queueNumber: Number(editValues.queueNumber),
+            peopleBefore: Number(editValues.peopleBefore),
+            estimatedWaitMinutes: Number(editValues.estimatedWaitMinutes),
+        };
+        // Optimistic
+        setReservations(prev => prev.map(r => r.id === id ? { ...r, ...payload } : r));
+        setEditingId(null);
+        try {
+            await api.put(`/reservations/${id}/info`, payload);
+        } catch (err) {
+            console.error('Error saving info:', err);
+            fetchData();
         }
     };
 
@@ -77,6 +123,17 @@ export default function PlaceDashboard() {
         { icon: <TrendingUp size={22} />, value: done.length, label: 'Terminés', color: '#27ae60', borderColor: 'rgba(39,174,96,0.2)' },
     ];
 
+    const inputStyle: React.CSSProperties = {
+        width: '60px',
+        padding: '4px 6px',
+        borderRadius: '6px',
+        border: '1px solid var(--border)',
+        background: 'var(--bg-elevated)',
+        color: 'var(--text)',
+        fontSize: '0.85rem',
+        textAlign: 'center',
+    };
+
     return (
         <div className="fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>
             {/* Header */}
@@ -89,7 +146,6 @@ export default function PlaceDashboard() {
                         <h1 style={{ fontSize: 'clamp(1.2rem, 4vw, 1.7rem)', fontWeight: 900, margin: 0, wordBreak: 'break-word' }}>{place?.name}</h1>
                         <p style={{ opacity: 0.85, margin: '4px 0 0', fontSize: 'clamp(0.78rem, 2vw, 0.95rem)', wordBreak: 'break-word' }}>{place?.address} — {place?.description}</p>
                     </div>
-                    {/* Open / Closed Toggle */}
                     <button
                         onClick={toggleOpenStatus}
                         style={{
@@ -108,7 +164,7 @@ export default function PlaceDashboard() {
                 </div>
             </div>
 
-            {/* Stats Cards — 2 cols on mobile, 4 on desktop */}
+            {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '28px' }}>
                 {statsData.map((s, i) => (
                     <div key={i} className="stat-card" style={{ borderColor: s.borderColor }}>
@@ -137,22 +193,46 @@ export default function PlaceDashboard() {
                     </div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '460px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '720px' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>N°</th>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Client</th>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Téléphone</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Avant lui</th>
+                                    <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Attente (min)</th>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Statut</th>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {todayReservations.sort((a, b) => a.queueNumber - b.queueNumber).map(res => (
+                                {todayReservations.slice().sort((a, b) => a.queueNumber - b.queueNumber).map(res => {
+                                    const isEditing = editingId === res.id;
+                                    return (
                                     <tr key={res.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }}>
-                                        <td style={{ padding: '14px 16px', fontWeight: 900, fontSize: '1.1rem', color: '#1e90ff' }}>#{res.queueNumber}</td>
+                                        <td style={{ padding: '14px 16px', fontWeight: 900, fontSize: '1.1rem', color: '#1e90ff' }}>
+                                            {isEditing ? (
+                                                <input style={inputStyle} type="number" value={editValues.queueNumber} onChange={e => setEditValues(v => ({ ...v, queueNumber: e.target.value }))} />
+                                            ) : (
+                                                <>#{res.queueNumber}</>
+                                            )}
+                                        </td>
                                         <td style={{ padding: '14px 16px', fontWeight: 600 }}>{res.user?.name}</td>
                                         <td style={{ padding: '14px 16px', color: 'var(--text-muted)' }}>{res.user?.phone || '—'}</td>
+                                        <td style={{ padding: '14px 16px', textAlign: 'center', color: '#f39c12', fontWeight: 700 }}>
+                                            {isEditing ? (
+                                                <input style={inputStyle} type="number" min={0} value={editValues.peopleBefore} onChange={e => setEditValues(v => ({ ...v, peopleBefore: e.target.value }))} />
+                                            ) : (
+                                                res.peopleBefore ?? 0
+                                            )}
+                                        </td>
+                                        <td style={{ padding: '14px 16px', textAlign: 'center', color: '#2ed573', fontWeight: 700 }}>
+                                            {isEditing ? (
+                                                <input style={inputStyle} type="number" min={0} value={editValues.estimatedWaitMinutes} onChange={e => setEditValues(v => ({ ...v, estimatedWaitMinutes: e.target.value }))} />
+                                            ) : (
+                                                <>~{res.estimatedWaitMinutes ?? 0}</>
+                                            )}
+                                        </td>
                                         <td style={{ padding: '14px 16px' }}>
                                             <span style={{
                                                 padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 700,
@@ -164,28 +244,47 @@ export default function PlaceDashboard() {
                                         </td>
                                         <td style={{ padding: '14px 16px' }}>
                                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                {res.status === 'waiting' && (
-                                                    <button onClick={() => updateStatus(res.id, 'called')} className="btn btn-sm" style={{ background: 'var(--success-glow)', color: '#2ed573', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <Phone size={12} /> Appeler
-                                                    </button>
-                                                )}
-                                                {res.status === 'called' && (
-                                                    <button onClick={() => updateStatus(res.id, 'done')} className="btn btn-sm" style={{ background: 'rgba(39,174,96,0.15)', color: '#27ae60', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <CheckCircle size={12} /> Terminé
-                                                    </button>
-                                                )}
-                                                {(res.status === 'waiting' || res.status === 'called') && (
-                                                    <button onClick={() => updateStatus(res.id, 'cancelled')} className="btn btn-sm" style={{ background: 'var(--danger-glow)', color: '#e74c3c', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <XCircle size={12} /> Annuler
-                                                    </button>
-                                                )}
-                                                {(res.status === 'done' || res.status === 'cancelled') && (
-                                                    <span style={{ fontSize: '0.8rem', opacity: 0.4 }}>—</span>
+                                                {isEditing ? (
+                                                    <>
+                                                        <button onClick={() => saveEdit(res.id)} className="btn btn-sm" style={{ background: 'var(--info-glow)', color: '#1e90ff', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <Save size={12} /> Sauver
+                                                        </button>
+                                                        <button onClick={() => setEditingId(null)} className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: 'none' }}>
+                                                            Annuler
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {(res.status === 'waiting' || res.status === 'called') && (
+                                                            <button onClick={() => beginEdit(res)} className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Edit2 size={12} /> Numéro
+                                                            </button>
+                                                        )}
+                                                        {res.status === 'waiting' && (
+                                                            <button onClick={() => updateStatus(res.id, 'called')} className="btn btn-sm" style={{ background: 'var(--success-glow)', color: '#2ed573', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Phone size={12} /> Appeler
+                                                            </button>
+                                                        )}
+                                                        {res.status === 'called' && (
+                                                            <button onClick={() => updateStatus(res.id, 'done')} className="btn btn-sm" style={{ background: 'rgba(39,174,96,0.15)', color: '#27ae60', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <CheckCircle size={12} /> Terminé
+                                                            </button>
+                                                        )}
+                                                        {(res.status === 'waiting' || res.status === 'called') && (
+                                                            <button onClick={() => updateStatus(res.id, 'cancelled')} className="btn btn-sm" style={{ background: 'var(--danger-glow)', color: '#e74c3c', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <XCircle size={12} /> Annuler
+                                                            </button>
+                                                        )}
+                                                        {(res.status === 'done' || res.status === 'cancelled') && (
+                                                            <span style={{ fontSize: '0.8rem', opacity: 0.4 }}>—</span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                );
+                                })}
                             </tbody>
                         </table>
                     </div>

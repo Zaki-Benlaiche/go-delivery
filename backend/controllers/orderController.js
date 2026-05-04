@@ -1,26 +1,38 @@
 const { Order, OrderItem, Product, Restaurant, User } = require('../models');
 
+// Shared include used by every order fetch — keeps payloads consistent.
+const ORDER_INCLUDE = [
+  { model: OrderItem, as: 'items', include: [{ model: Product, as: 'product' }] },
+  { model: Restaurant, as: 'restaurant' },
+  { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
+  { model: User, as: 'driver', attributes: ['id', 'name', 'phone'] },
+];
+
 exports.createOrder = async (req, res, io) => {
   try {
     const { restaurantId, items, deliveryAddress } = req.body;
-
-    // Validate restaurant
-    const restaurant = await Restaurant.findByPk(restaurantId);
-    if (!restaurant) {
-      return res.status(404).json({ message: 'Restaurant not found.' });
-    }
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Order must have at least one item.' });
     }
 
-    // Calculate total
+    const restaurant = await Restaurant.findByPk(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ message: 'Restaurant not found.' });
+    }
+
+    // Bulk fetch products in a single query — replaces N+1 loop.
+    const productIds = items.map(i => i.productId);
+    const products = await Product.findAll({ where: { id: productIds } });
+    const productMap = new Map(products.map(p => [p.id, p]));
+
     let total = 0;
+    const orderItemsPayload = [];
     for (const item of items) {
-      const product = await Product.findByPk(item.productId);
-      if (product) {
-        total += product.price * item.quantity;
-      }
+      const product = productMap.get(item.productId);
+      if (!product) continue;
+      total += product.price * item.quantity;
+      orderItemsPayload.push({ productId: item.productId, quantity: item.quantity, price: product.price });
     }
 
     const order = await Order.create({
@@ -28,33 +40,19 @@ exports.createOrder = async (req, res, io) => {
       restaurantId,
       deliveryAddress,
       total,
+      deliveryFee: 0,
       status: 'pending',
     });
 
-    // Create order items
-    for (const item of items) {
-      const product = await Product.findByPk(item.productId);
-      if (product) {
-        await OrderItem.create({
-          orderId: order.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          price: product.price,
-        });
-      }
-    }
+    // Bulk create order items
+    await OrderItem.bulkCreate(orderItemsPayload.map(p => ({ ...p, orderId: order.id })));
 
-    // Fetch complete order with relations
-    const fullOrder = await Order.findByPk(order.id, {
-      include: [
-        { model: OrderItem, as: 'items', include: [{ model: Product, as: 'product' }] },
-        { model: Restaurant, as: 'restaurant' },
-        { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
-      ],
-    });
+    const fullOrder = await Order.findByPk(order.id, { include: ORDER_INCLUDE });
 
-    // Notify restaurant via Socket.io
-    io.emit('new_order', fullOrder);
+    // Targeted notification: only the restaurant that owns this order needs to know.
+    io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
+    // Customer also gets the confirmation event in their personal room.
+    io.to(`client_${req.user.id}`).emit('new_order', fullOrder);
 
     res.status(201).json(fullOrder);
   } catch (err) {
@@ -70,23 +68,15 @@ exports.getOrders = async (req, res) => {
 
     if (role === 'client') where = { customerId: id };
     if (role === 'restaurant') {
-      const rest = await Restaurant.findOne({ where: { userId: id } });
-      if (rest) {
-        where = { restaurantId: rest.id };
-      } else {
-        return res.json([]); // No restaurant yet
-      }
+      const rest = await Restaurant.findOne({ where: { userId: id }, attributes: ['id'] });
+      if (!rest) return res.json([]);
+      where = { restaurantId: rest.id };
     }
     if (role === 'driver') where = { driverId: id };
 
     const orders = await Order.findAll({
       where,
-      include: [
-        { model: OrderItem, as: 'items', include: [{ model: Product, as: 'product' }] },
-        { model: Restaurant, as: 'restaurant' },
-        { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'driver', attributes: ['id', 'name', 'phone'] },
-      ],
+      include: ORDER_INCLUDE,
       order: [['createdAt', 'DESC']],
     });
 
@@ -117,38 +107,40 @@ exports.getAvailableOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res, io) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, deliveryFee } = req.body;
 
     const order = await Order.findByPk(id);
     if (!order) return res.status(404).json({ message: 'Order not found.' });
 
-    // Race condition prevention for drivers
+    // Driver accepts the run — claim with race-condition guard and apply their price.
     if (status === 'out_for_delivery' && req.user.role === 'driver') {
       if (order.driverId && order.driverId !== req.user.id) {
         return res.status(409).json({ message: 'Order already accepted by another driver.' });
       }
       order.driverId = req.user.id;
+      const fee = Number(deliveryFee);
+      if (Number.isFinite(fee) && fee >= 0) {
+        order.deliveryFee = fee;
+      }
     }
 
     order.status = status;
     await order.save();
 
-    // Fetch updated order with relations
-    const fullOrder = await Order.findByPk(id, {
-      include: [
-        { model: OrderItem, as: 'items', include: [{ model: Product, as: 'product' }] },
-        { model: Restaurant, as: 'restaurant' },
-        { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
-        { model: User, as: 'driver', attributes: ['id', 'name', 'phone'] },
-      ],
-    });
+    const fullOrder = await Order.findByPk(id, { include: ORDER_INCLUDE });
 
-    // Notify all clients
-    io.emit('order_updated', fullOrder);
+    // Send to the parties involved instead of broadcasting to every connected socket.
+    const restaurantOwnerId = fullOrder.restaurant?.userId;
+    if (restaurantOwnerId) io.to(`restaurant_${restaurantOwnerId}`).emit('order_updated', fullOrder);
+    if (fullOrder.customerId) io.to(`client_${fullOrder.customerId}`).emit('order_updated', fullOrder);
+    if (fullOrder.driverId) io.to(`driver_${fullOrder.driverId}`).emit('order_updated', fullOrder);
 
-    // If order is ready, notify drivers
     if (status === 'ready') {
-      io.emit('order_ready_for_pickup', fullOrder);
+      // All available drivers should hear about this pickup.
+      io.to('drivers').emit('order_ready_for_pickup', fullOrder);
+    } else if (status === 'out_for_delivery') {
+      // Removed from the pool — let drivers drop it from their available list.
+      io.to('drivers').emit('order_taken', { id: fullOrder.id });
     }
 
     res.json(fullOrder);
@@ -157,4 +149,3 @@ exports.updateOrderStatus = async (req, res, io) => {
     res.status(500).json({ message: 'Server error.', error: err.message });
   }
 };
-

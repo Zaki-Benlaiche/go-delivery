@@ -1,25 +1,23 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOrderStore } from '@/store/orderStore';
+import { useReservationStore } from '@/store/reservationStore';
 import StatusBadge from '@/components/StatusBadge';
 import api from '@/lib/api';
 import type { Restaurant, Product, OrderStatus } from '@/types';
 import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, ChevronLeft, Navigation, Phone, ChefHat, User, X, ShoppingCart, ClipboardList, Users, XCircle, CheckCircle, Truck } from 'lucide-react';
 
-interface PlaceWithQueue {
-  id: number; name: string; type: string; address: string; description: string; icon: string; waitingCount: number; isOpen: boolean;
-}
-interface MyReservation {
-  id: number; queueNumber: number; status: string; date: string; estimatedWaitMinutes: number;
-  place: { id: number; name: string; icon: string; address: string; type: string };
-}
-interface QueueInfo {
-  queueNumber: number; status: string; peopleAhead: number; estimatedWaitMinutes: number;
-}
-
 export default function CustomerDashboard() {
   const { orders, fetchOrders, createOrder } = useOrderStore();
+  const places = useReservationStore(s => s.places);
+  const myReservations = useReservationStore(s => s.myReservations);
+  const resLoaded = useReservationStore(s => s.loaded);
+  const fetchReservationData = useReservationStore(s => s.fetchAll);
+  const bookReservationStore = useReservationStore(s => s.bookSpot);
+  const cancelReservationStore = useReservationStore(s => s.cancelReservation);
+  const listenReservationSocket = useReservationStore(s => s.listenToSocket);
+
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [cart, setCart] = useState<Record<number, number>>({});
@@ -31,51 +29,12 @@ export default function CustomerDashboard() {
   const [appMode, setAppMode] = useState<'delivery' | 'reservation'>('delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
 
-  const [places, setPlaces] = useState<PlaceWithQueue[]>([]);
-  const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
-  const [queueInfoMap, setQueueInfoMap] = useState<Record<number, QueueInfo>>({});
   const [bookingPlaceId, setBookingPlaceId] = useState<number | null>(null);
-  const [resLoading, setResLoading] = useState(false);
-
-  const fetchReservationData = useCallback(async () => {
-    try {
-      setResLoading(true);
-      const [placesRes, reservationsRes] = await Promise.all([
-        api.get('/places'),
-        api.get('/reservations/my'),
-      ]);
-      setPlaces(placesRes.data);
-      setMyReservations(reservationsRes.data);
-
-      const active = reservationsRes.data.filter((r: MyReservation) => r.status === 'waiting' || r.status === 'called');
-      // Parallel fetch — avoids sequential N+1 API calls
-      const queueResults = await Promise.all(
-        active.map(async (res: MyReservation) => {
-          try {
-            const qi = await api.get(`/reservations/queue/${res.id}`);
-            return [res.id, qi.data] as const;
-          } catch {
-            return [res.id, null] as const;
-          }
-        })
-      );
-      const queueInfos: Record<number, QueueInfo> = {};
-      for (const [id, info] of queueResults) {
-        if (info) queueInfos[id] = info;
-      }
-      setQueueInfoMap(queueInfos);
-    } catch (err) {
-      console.error('Error fetching reservation data:', err);
-    } finally {
-      setResLoading(false);
-    }
-  }, []);
 
   const bookSpot = async (placeId: number) => {
     try {
       setBookingPlaceId(placeId);
-      await api.post('/reservations', { placeId });
-      await fetchReservationData();
+      await bookReservationStore(placeId);
     } catch (err) {
       console.error('Error booking spot:', err);
     } finally {
@@ -85,8 +44,7 @@ export default function CustomerDashboard() {
 
   const cancelReservation = async (id: number) => {
     try {
-      await api.put(`/reservations/${id}/cancel`);
-      await fetchReservationData();
+      await cancelReservationStore(id);
     } catch (err) {
       console.error('Error cancelling:', err);
     }
@@ -117,14 +75,10 @@ export default function CustomerDashboard() {
     fetchOrders();
     loadRestaurants();
     fetchReservationData();
-
-    const interval = setInterval(() => {
-      loadRestaurants();
-      if (appMode === 'reservation') fetchReservationData();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [fetchOrders, fetchReservationData, appMode]);
+    const cleanup = listenReservationSocket();
+    return cleanup;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addToCart = (productId: number) => {
     setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
@@ -208,13 +162,13 @@ export default function CustomerDashboard() {
               <span>Sous-total</span>
               <span>{cartTotal} DA</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               <span>Livraison</span>
-              <span>200 DA</span>
+              <span style={{ fontStyle: 'italic' }}>fixée par le livreur</span>
             </div>
             <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}>
-              <span style={{ fontWeight: 600 }}>Total</span>
-              <span style={{ fontSize: 'clamp(1.3rem, 4vw, 1.7rem)', fontWeight: 900, color: 'white', lineHeight: 1 }}>{cartTotal + 200} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>DA</span></span>
+              <span style={{ fontWeight: 600 }}>Total plats</span>
+              <span style={{ fontSize: 'clamp(1.3rem, 4vw, 1.7rem)', fontWeight: 900, color: 'white', lineHeight: 1 }}>{cartTotal} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>DA</span></span>
             </div>
           </div>
 
@@ -252,7 +206,7 @@ export default function CustomerDashboard() {
             disabled={isOrdering}
             style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', padding: '14px', borderRadius: '12px' }}
           >
-            {isOrdering ? 'Traitement...' : `Commander (${cartTotal + 200} DA)`}
+            {isOrdering ? 'Traitement...' : `Commander (${cartTotal} DA)`}
           </button>
         </>
       )}
@@ -434,7 +388,6 @@ export default function CustomerDashboard() {
                   </p>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ background: 'var(--success)', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700 }}>Ouvert</span>
-                    <span style={{ background: 'rgba(255,255,255,0.1)', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem' }}>200 DA</span>
                   </div>
                 </div>
               </div>
@@ -505,7 +458,7 @@ export default function CustomerDashboard() {
               </div>
               <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Voir le panier</span>
             </div>
-            <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>{cartTotal + 200} DA</span>
+            <span style={{ fontWeight: 900, fontSize: '1.1rem' }}>{cartTotal} DA</span>
           </div>
         )}
 
@@ -562,7 +515,12 @@ export default function CustomerDashboard() {
                                 </div>
                               </div>
                               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', fontWeight: 900, color: 'var(--accent)' }}>{order.total} DA</div>
+                                <div style={{ fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', fontWeight: 900, color: 'var(--accent)' }}>{order.total + (order.deliveryFee || 0)} DA</div>
+                                {order.deliveryFee ? (
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>plats {order.total} + livreur {order.deliveryFee}</div>
+                                ) : (
+                                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>+ livraison à confirmer</div>
+                                )}
                               </div>
                             </div>
 
@@ -680,7 +638,6 @@ export default function CustomerDashboard() {
               </h2>
               <div style={{ display: 'grid', gap: '14px' }}>
                 {activeReservations.map(res => {
-                  const qi = queueInfoMap[res.id];
                   return (
                     <div key={res.id} style={{ background: 'var(--bg-card)', borderRadius: '18px', padding: 'clamp(16px, 3vw, 24px)', border: '2px solid rgba(30,144,255,0.2)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
@@ -698,18 +655,18 @@ export default function CustomerDashboard() {
                         </button>
                       </div>
 
-                      {/* Queue Stats */}
+                      {/* Queue Stats — these values are set by the establishment (doctor / agent). */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: 'var(--bg)', borderRadius: '12px', padding: 'clamp(12px, 3vw, 18px)' }}>
                         <div style={{ textAlign: 'center' }}>
                           <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', fontWeight: 900, color: '#1e90ff' }}>#{res.queueNumber}</div>
                           <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>Numéro</div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', fontWeight: 900, color: '#f39c12' }}>{qi?.peopleAhead ?? '—'}</div>
+                          <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', fontWeight: 900, color: '#f39c12' }}>{res.peopleBefore ?? 0}</div>
                           <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>Avant vous</div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', fontWeight: 900, color: '#2ed573' }}>~{qi?.estimatedWaitMinutes ?? '—'}</div>
+                          <div style={{ fontSize: 'clamp(1.5rem, 4vw, 2.2rem)', fontWeight: 900, color: '#2ed573' }}>~{res.estimatedWaitMinutes ?? 0}</div>
                           <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>Minutes</div>
                         </div>
                       </div>
@@ -731,7 +688,7 @@ export default function CustomerDashboard() {
             <Users size={20} color="#1e90ff" /> Établissements
           </h2>
 
-          {resLoading && places.length === 0 ? (
+          {!resLoaded && places.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '30px', opacity: 0.5 }}>
               <div className="pulse-icon" style={{ fontSize: '1rem' }}>Chargement...</div>
             </div>

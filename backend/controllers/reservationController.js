@@ -1,4 +1,11 @@
 const { Place, Reservation, User } = require('../models');
+const { Op, fn, col, literal } = require('sequelize');
+
+const todayStart = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
 
 // 1. Get all places
 exports.getPlaces = async (req, res) => {
@@ -11,33 +18,41 @@ exports.getPlaces = async (req, res) => {
 };
 
 // 2. Create a reservation
-exports.createReservation = async (req, res) => {
+exports.createReservation = async (req, res, io) => {
     try {
         const { placeId } = req.body;
         const userId = req.user.id;
-
-        // Get the highest queue number for this place today
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        const startOfDay = todayStart();
 
         const queueCount = await Reservation.count({
-            where: {
-                placeId,
-                date: startOfDay,
-            }
+            where: { placeId, date: startOfDay }
         });
 
-        const queueNumber = queueCount + 1; // Basic logic: next in line
+        const queueNumber = queueCount + 1;
 
         const newReservation = await Reservation.create({
             userId,
             placeId,
             queueNumber,
+            peopleBefore: queueCount,
             date: startOfDay,
-            estimatedWaitMinutes: queueNumber * 15, // 15 mins per person roughly
+            estimatedWaitMinutes: queueCount * 15,
         });
 
-        res.status(201).json(newReservation);
+        const fullReservation = await Reservation.findByPk(newReservation.id, {
+            include: [
+                { model: Place, as: 'place' },
+                { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
+            ],
+        });
+
+        // Notify the place owner so their dashboard updates instantly.
+        const place = fullReservation.place;
+        if (io && place?.userId) {
+            io.to(`place_${place.userId}`).emit('reservation_created', fullReservation);
+        }
+
+        res.status(201).json(fullReservation);
     } catch (error) {
         res.status(500).json({ message: 'Error creating reservation', error: error.message });
     }
@@ -59,18 +74,25 @@ exports.getMyReservations = async (req, res) => {
 };
 
 // 4. Cancel my reservation
-exports.cancelReservation = async (req, res) => {
+exports.cancelReservation = async (req, res, io) => {
     try {
         const { id } = req.params;
         const userId = req.user.id;
 
-        const reservation = await Reservation.findOne({ where: { id, userId } });
+        const reservation = await Reservation.findOne({
+            where: { id, userId },
+            include: [{ model: Place, as: 'place' }],
+        });
         if (!reservation) {
             return res.status(404).json({ message: 'Reservation not found' });
         }
 
         reservation.status = 'cancelled';
         await reservation.save();
+
+        if (io && reservation.place?.userId) {
+            io.to(`place_${reservation.place.userId}`).emit('reservation_updated', reservation);
+        }
 
         res.json({ message: 'Reservation cancelled successfully', reservation });
     } catch (error) {
@@ -94,8 +116,8 @@ exports.getAllReservations = async (req, res) => {
     }
 };
 
-// 6. Admin: Update reservation status (waiting -> called -> done)
-exports.updateReservationStatus = async (req, res) => {
+// 6. Admin / Place owner: Update reservation status (waiting -> called -> done)
+exports.updateReservationStatus = async (req, res, io) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
@@ -117,9 +139,62 @@ exports.updateReservationStatus = async (req, res) => {
         reservation.status = status;
         await reservation.save();
 
+        if (io) {
+            if (reservation.place?.userId) {
+                io.to(`place_${reservation.place.userId}`).emit('reservation_updated', reservation);
+            }
+            io.to(`client_${reservation.userId}`).emit('reservation_updated', reservation);
+        }
+
         res.json({ message: `Reservation status updated to ${status}`, reservation });
     } catch (error) {
         res.status(500).json({ message: 'Error updating reservation', error: error.message });
+    }
+};
+
+// 6b. Place owner: edit ticket number, people-before, and ETA for a reservation.
+// This is what lets the doctor say "you're #5, 3 people remain ahead of you".
+exports.updateReservationInfo = async (req, res, io) => {
+    try {
+        const { id } = req.params;
+        const { queueNumber, peopleBefore, estimatedWaitMinutes } = req.body;
+
+        const reservation = await Reservation.findByPk(id, {
+            include: [{ model: Place, as: 'place' }, { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] }],
+        });
+        if (!reservation) {
+            return res.status(404).json({ message: 'Reservation not found' });
+        }
+
+        // Only the place owner (or admin) can override these values.
+        const isOwner = reservation.place?.userId === req.user.id;
+        const isAdmin = req.user.role === 'admin';
+        if (!isOwner && !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        if (queueNumber !== undefined && Number.isFinite(Number(queueNumber))) {
+            reservation.queueNumber = Number(queueNumber);
+        }
+        if (peopleBefore !== undefined && Number.isFinite(Number(peopleBefore))) {
+            reservation.peopleBefore = Math.max(0, Number(peopleBefore));
+        }
+        if (estimatedWaitMinutes !== undefined && Number.isFinite(Number(estimatedWaitMinutes))) {
+            reservation.estimatedWaitMinutes = Math.max(0, Number(estimatedWaitMinutes));
+        }
+
+        await reservation.save();
+
+        if (io) {
+            if (reservation.place?.userId) {
+                io.to(`place_${reservation.place.userId}`).emit('reservation_updated', reservation);
+            }
+            io.to(`client_${reservation.userId}`).emit('reservation_updated', reservation);
+        }
+
+        res.json({ message: 'Reservation info updated', reservation });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating reservation info', error: error.message });
     }
 };
 
@@ -159,23 +234,26 @@ exports.getQueueInfo = async (req, res) => {
             return res.status(404).json({ message: 'Reservation not found' });
         }
 
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        // If the place owner has set explicit values, honor them — they know the actual queue better than us.
+        const usingDoctorValues = reservation.peopleBefore > 0 || reservation.estimatedWaitMinutes > 0;
 
-        const peopleAhead = await Reservation.count({
-            where: {
-                placeId: reservation.placeId,
-                date: startOfDay,
-                status: 'waiting',
-                queueNumber: { [require('sequelize').Op.lt]: reservation.queueNumber }
-            }
-        });
+        let peopleAhead = reservation.peopleBefore;
+        if (!usingDoctorValues) {
+            peopleAhead = await Reservation.count({
+                where: {
+                    placeId: reservation.placeId,
+                    date: todayStart(),
+                    status: 'waiting',
+                    queueNumber: { [Op.lt]: reservation.queueNumber }
+                }
+            });
+        }
 
         res.json({
             queueNumber: reservation.queueNumber,
             status: reservation.status,
             peopleAhead,
-            estimatedWaitMinutes: peopleAhead * 15,
+            estimatedWaitMinutes: reservation.estimatedWaitMinutes || peopleAhead * 15,
             place: reservation.place
         });
     } catch (error) {
@@ -183,23 +261,47 @@ exports.getQueueInfo = async (req, res) => {
     }
 };
 
-// 9. Get places with today's queue count
+// 9. Get places with today's queue count (single GROUP BY query — no N+1).
 exports.getPlacesWithQueue = async (req, res) => {
     try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        const startOfDay = todayStart();
 
-        const places = await Place.findAll();
-        const placesData = await Promise.all(places.map(async (place) => {
-            const waitingCount = await Reservation.count({
-                where: { placeId: place.id, date: startOfDay, status: 'waiting' }
-            });
-            return { ...place.toJSON(), waitingCount };
-        }));
+        const places = await Place.findAll({
+            attributes: {
+                include: [
+                    [
+                        literal(`(
+                            SELECT COUNT(*)
+                            FROM "Reservations" AS r
+                            WHERE r."placeId" = "Place"."id"
+                              AND r."date" = '${startOfDay.toISOString().split('T')[0]}'
+                              AND r."status" = 'waiting'
+                        )`),
+                        'waitingCount'
+                    ]
+                ]
+            },
+            order: [['id', 'ASC']],
+        });
 
-        res.json(placesData);
+        res.json(places);
     } catch (error) {
-        res.status(500).json({ message: 'Error', error: error.message });
+        // Fallback path for SQLite (table name unquoted, etc.) — keeps dev environments working.
+        try {
+            const startOfDay = todayStart();
+            const places = await Place.findAll();
+            const counts = await Reservation.findAll({
+                where: { date: startOfDay, status: 'waiting' },
+                attributes: ['placeId', [fn('COUNT', col('id')), 'count']],
+                group: ['placeId'],
+                raw: true,
+            });
+            const countMap = new Map(counts.map(c => [c.placeId, Number(c.count)]));
+            const placesData = places.map(p => ({ ...p.toJSON(), waitingCount: countMap.get(p.id) || 0 }));
+            res.json(placesData);
+        } catch (e2) {
+            res.status(500).json({ message: 'Error', error: e2.message });
+        }
     }
 };
 

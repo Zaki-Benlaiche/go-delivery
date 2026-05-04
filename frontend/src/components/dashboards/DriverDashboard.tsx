@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOrderStore } from '@/store/orderStore';
-import { Truck, MapPin, Phone, CheckCircle2, Navigation, Package, Store, User, Zap, Radio, TrendingUp } from 'lucide-react';
+import { Truck, MapPin, Phone, CheckCircle2, Navigation, Package, Store, User, Zap, Radio, TrendingUp, X } from 'lucide-react';
 
 export default function DriverDashboard() {
   const { orders, availableOrders, fetchOrders, fetchAvailableOrders, updateStatus } = useOrderStore();
+
+  // Modal state for the price the livreur wants to charge for this run.
+  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
+  const [pendingFee, setPendingFee] = useState<string>('');
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -14,6 +19,31 @@ export default function DriverDashboard() {
 
   const myActiveDeliveries = orders.filter((o) => o.status === 'out_for_delivery');
   const myCompletedDeliveries = orders.filter((o) => o.status === 'delivered');
+
+  const beginAccept = (orderId: number) => {
+    setPendingOrderId(orderId);
+    setPendingFee('');
+  };
+
+  const confirmAccept = async () => {
+    if (pendingOrderId == null) return;
+    const fee = Number(pendingFee);
+    if (!Number.isFinite(fee) || fee < 0) return;
+    setAccepting(true);
+    try {
+      await updateStatus(pendingOrderId, 'out_for_delivery', { deliveryFee: fee });
+      setPendingOrderId(null);
+      setPendingFee('');
+    } catch {
+      // Server rejected (likely 409 — taken by someone else). Keep the modal open
+      // so the user sees the failed state, then refresh to drop the stale row.
+      fetchAvailableOrders();
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const pendingOrder = pendingOrderId != null ? availableOrders.find(o => o.id === pendingOrderId) : null;
 
   return (
     <div className="fade-in">
@@ -69,8 +99,8 @@ export default function DriverDashboard() {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 900, color: 'var(--accent)' }}>{order.total} DA</div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>À encaisser</span>
+                    <div style={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: 900, color: 'var(--accent)' }}>{order.total + (order.deliveryFee || 0)} DA</div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>À encaisser{order.deliveryFee ? ` (livraison ${order.deliveryFee})` : ''}</span>
                   </div>
                 </div>
 
@@ -174,7 +204,7 @@ export default function DriverDashboard() {
                   <button
                     className="btn btn-primary"
                     style={{ padding: '12px 20px', borderRadius: '12px', fontWeight: 800, whiteSpace: 'nowrap', flexShrink: 0 }}
-                    onClick={() => updateStatus(order.id, 'out_for_delivery')}
+                    onClick={() => beginAccept(order.id)}
                   >
                     ACCEPTER
                   </button>
@@ -221,6 +251,84 @@ export default function DriverDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Delivery price prompt — livreur sets their own fee before accepting. */}
+      {pendingOrderId != null && (
+        <div
+          onClick={() => !accepting && setPendingOrderId(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="card fade-in"
+            style={{
+              width: '100%', maxWidth: '420px', padding: '24px',
+              border: '1px solid rgba(46,213,115,0.25)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
+                <Truck size={18} color="#2ed573" /> Fixer le prix de livraison
+              </h3>
+              <button
+                onClick={() => !accepting && setPendingOrderId(null)}
+                disabled={accepting}
+                style={{ background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: accepting ? 'not-allowed' : 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {pendingOrder ? (
+              <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '10px', marginBottom: '18px', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Restaurant</span>
+                  <strong>{pendingOrder.restaurant?.name}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total plats</span>
+                  <strong>{pendingOrder.total} DA</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Vers</span>
+                  <span style={{ textAlign: 'right', maxWidth: '60%' }}>{pendingOrder.deliveryAddress || '—'}</span>
+                </div>
+              </div>
+            ) : null}
+
+            <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
+              Prix livreur (DA)
+            </label>
+            <input
+              type="number"
+              autoFocus
+              min={0}
+              value={pendingFee}
+              onChange={(e) => setPendingFee(e.target.value)}
+              placeholder="Ex: 200"
+              style={{
+                width: '100%', padding: '14px 16px', borderRadius: '12px',
+                border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text)',
+                fontSize: '1.1rem', fontWeight: 700, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+              }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && pendingFee !== '') confirmAccept(); }}
+            />
+
+            <button
+              onClick={confirmAccept}
+              disabled={accepting || pendingFee === ''}
+              className="btn btn-success btn-block"
+              style={{ marginTop: '18px', padding: '14px', fontSize: '1rem', fontWeight: 800, borderRadius: '12px' }}
+            >
+              {accepting ? 'Validation...' : `Accepter et démarrer`}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

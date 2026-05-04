@@ -62,6 +62,7 @@ export interface Order {
   id: number;
   status: OrderStatus;
   total: number;
+  deliveryFee?: number;
   deliveryAddress: string;
   createdAt: string;
   updatedAt?: string;

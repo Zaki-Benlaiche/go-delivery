@@ -19,6 +19,10 @@ const Reservation = sequelize.define('Reservation', {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
+    peopleBefore: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+    },
     status: {
         type: DataTypes.ENUM('waiting', 'called', 'done', 'cancelled'),
         allowNull: false,
@@ -33,6 +37,14 @@ const Reservation = sequelize.define('Reservation', {
         type: DataTypes.INTEGER,
         defaultValue: 0,
     }
+}, {
+    indexes: [
+        { fields: ['placeId'] },
+        { fields: ['userId'] },
+        { fields: ['date'] },
+        { fields: ['status'] },
+        { fields: ['placeId', 'date', 'status'] },
+    ],
 });
 
 module.exports = Reservation;

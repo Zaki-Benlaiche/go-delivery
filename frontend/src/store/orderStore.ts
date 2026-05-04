@@ -12,7 +12,7 @@ interface OrderState {
   fetchOrders: () => Promise<void>;
   fetchAvailableOrders: () => Promise<void>;
   createOrder: (restaurantId: number, items: { productId: number; quantity: number }[], deliveryAddress: string) => Promise<void>;
-  updateStatus: (orderId: number, status: string) => Promise<void>;
+  updateStatus: (orderId: number, status: string, opts?: { deliveryFee?: number }) => Promise<void>;
   listenToSocket: () => () => void;
 }
 
@@ -60,13 +60,16 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     }
   },
 
-  updateStatus: async (orderId, status) => {
+  updateStatus: async (orderId, status, opts) => {
     try {
-      await api.put(`/orders/${orderId}/status`, { status });
-      await get().fetchOrders();
-      await get().fetchAvailableOrders();
+      const body: { status: string; deliveryFee?: number } = { status };
+      if (opts?.deliveryFee !== undefined) body.deliveryFee = opts.deliveryFee;
+      await api.put(`/orders/${orderId}/status`, body);
+      // Don't refetch — the server's socket event keeps state in sync, and a
+      // second HTTP round-trip on every action just slows the UI down.
     } catch (err) {
       console.error('updateStatus error:', err);
+      throw err;
     }
   },
 
@@ -252,14 +255,22 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       }));
     };
 
+    const handleOrderTaken = ({ id }: { id: number }) => {
+      set((state) => ({
+        availableOrders: state.availableOrders.filter((o) => o.id !== id),
+      }));
+    };
+
     socket.on('order_updated', handleOrderUpdate);
     socket.on('new_order', handleNewOrder);
     socket.on('order_ready_for_pickup', handleReadyForPickup);
+    socket.on('order_taken', handleOrderTaken);
 
     return () => {
       socket.off('order_updated', handleOrderUpdate);
       socket.off('new_order', handleNewOrder);
       socket.off('order_ready_for_pickup', handleReadyForPickup);
+      socket.off('order_taken', handleOrderTaken);
     };
   },
 }));

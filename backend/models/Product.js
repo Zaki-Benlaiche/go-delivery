@@ -27,6 +27,10 @@ const Product = sequelize.define('Product', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
+}, {
+  indexes: [
+    { fields: ['restaurantId'] },
+  ],
 });
 
 module.exports = Product;

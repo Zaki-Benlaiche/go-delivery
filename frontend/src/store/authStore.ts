@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
+import { resetSocketIdentity } from '@/lib/socket';
 import type { User, AuthResponse } from '@/types';
 
 interface AuthState {
@@ -67,6 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    resetSocketIdentity();
     set({ user: null, token: null });
   },
 }));

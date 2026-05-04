@@ -2,13 +2,21 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+let compression;
+try {
+  compression = require('compression');
+} catch {
+  compression = null; // Optional dep; if missing the app still runs, just without gzip.
+}
+
 const { sequelize, User, Restaurant, Product, Place } = require('./models');
+const { SECRET } = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
 const restaurantRoutes = require('./routes/restaurantRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const reservationRoutes = require('./routes/reservationRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -26,8 +34,14 @@ const corsOptions = {
 };
 
 // Socket.io always stays open for mobile APK compatibility
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: { origin: '*' },
+  // Tighter ping config — drop dead clients faster on a busy server.
+  pingInterval: 25000,
+  pingTimeout: 20000,
+});
 
+if (compression) app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -37,12 +51,30 @@ app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/orders', require('./routes/orderRoutes')(io));
 app.use('/api/admin', adminRoutes);
-app.use('/api', reservationRoutes);
+app.use('/api', require('./routes/reservationRoutes')(io));
 
-// Socket.io
+// Socket.io: clients identify themselves and join role-specific rooms so we
+// only push events to the parties that actually care about them.
 io.on('connection', (socket) => {
-  console.log(`✅ Client connected: ${socket.id}`);
-  socket.on('disconnect', () => console.log(`❌ Client disconnected: ${socket.id}`));
+  socket.on('identify', (payload) => {
+    try {
+      const token = payload?.token;
+      if (!token) return;
+      const decoded = jwt.verify(token, SECRET);
+      const { id, role } = decoded;
+
+      if (role === 'client') socket.join(`client_${id}`);
+      if (role === 'driver') {
+        socket.join('drivers');
+        socket.join(`driver_${id}`);
+      }
+      if (role === 'restaurant') socket.join(`restaurant_${id}`);
+      if (role === 'place') socket.join(`place_${id}`);
+      if (role === 'admin') socket.join('admins');
+    } catch {
+      // bad token — silently ignore, the next API call will reject them anyway.
+    }
+  });
 });
 
 // Error Handling Middleware
@@ -140,7 +172,11 @@ const seedDatabase = async () => {
 // Start Server
 const PORT = process.env.PORT || 3001;
 
-sequelize.sync({ alter: true }).then(async () => {
+// `alter: true` adds new columns on boot. Set SYNC_ALTER=0 to skip the schema
+// diff on subsequent restarts once the schema is stable.
+const syncOptions = process.env.SYNC_ALTER === '0' ? {} : { alter: true };
+
+sequelize.sync(syncOptions).then(async () => {
   await seedDatabase();
   server.listen(PORT, () => {
     console.log(`🚀 GO-DELIVERY Backend running on http://localhost:${PORT}`);
@@ -148,4 +184,3 @@ sequelize.sync({ alter: true }).then(async () => {
 }).catch(err => {
   console.error('❌ Failed to sync database:', err);
 });
-

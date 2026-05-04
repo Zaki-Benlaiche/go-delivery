@@ -13,6 +13,8 @@ interface AuthPageProps {
 export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProps) {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
+  // When AuthPage is reached via the /auth route (no onBack prop), still let the user go back.
+  const handleBack = onBack ?? (() => router.push('/'));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -78,19 +80,17 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
   return (
     <div className="auth-page">
       <div className="auth-card fade-in" style={{ maxWidth: role === 'place' && !isLogin ? '520px' : '440px', transition: 'max-width 0.3s' }}>
-        {onBack && (
-          <button
-            onClick={onBack}
-            style={{
-              background: 'none', border: 'none', color: 'var(--text-muted)',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-              fontSize: '0.85rem', marginBottom: '16px', padding: 0,
-              fontFamily: 'inherit',
-            }}
-          >
-            <ChevronLeft size={18} /> Retour
-          </button>
-        )}
+        <button
+          onClick={handleBack}
+          style={{
+            background: 'none', border: 'none', color: 'var(--text-muted)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+            fontSize: '0.85rem', marginBottom: '16px', padding: 0,
+            fontFamily: 'inherit',
+          }}
+        >
+          <ChevronLeft size={18} /> Retour
+        </button>
 
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
           <img src="/icon.png" alt="Réserve-vite" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />

@@ -23,10 +23,22 @@ const Order = sequelize.define('Order', {
     type: DataTypes.FLOAT,
     defaultValue: 0,
   },
+  deliveryFee: {
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+  },
   deliveryAddress: {
     type: DataTypes.STRING,
     defaultValue: '',
   },
+}, {
+  indexes: [
+    { fields: ['status'] },
+    { fields: ['customerId'] },
+    { fields: ['driverId'] },
+    { fields: ['restaurantId'] },
+    { fields: ['status', 'driverId'] },
+  ],
 });
 
 module.exports = Order;
