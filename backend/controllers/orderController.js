@@ -8,6 +8,15 @@ const ORDER_INCLUDE = [
   { model: User, as: 'driver', attributes: ['id', 'name', 'phone'] },
 ];
 
+// Clamp and parse pagination params. Defaults are tuned so the existing UI
+// (which doesn't paginate yet) keeps working: 50 rows is enough for active +
+// recent history, while preventing accidental "load everything" payloads.
+const parsePagination = (req, defaultLimit = 50, maxLimit = 200) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || defaultLimit, 1), maxLimit);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  return { limit, offset };
+};
+
 exports.createOrder = async (req, res, io) => {
   try {
     const { restaurantId, items, deliveryAddress } = req.body;
@@ -64,6 +73,7 @@ exports.createOrder = async (req, res, io) => {
 exports.getOrders = async (req, res) => {
   try {
     const { role, id } = req.user;
+    const { limit, offset } = parsePagination(req);
     let where = {};
 
     if (role === 'client') where = { customerId: id };
@@ -78,6 +88,8 @@ exports.getOrders = async (req, res) => {
       where,
       include: ORDER_INCLUDE,
       order: [['createdAt', 'DESC']],
+      limit,
+      offset,
     });
 
     res.json(orders);
@@ -89,6 +101,7 @@ exports.getOrders = async (req, res) => {
 
 exports.getAvailableOrders = async (req, res) => {
   try {
+    const { limit, offset } = parsePagination(req, 100, 200);
     const orders = await Order.findAll({
       where: { status: 'ready', driverId: null },
       include: [
@@ -96,6 +109,8 @@ exports.getAvailableOrders = async (req, res) => {
         { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
       ],
       order: [['createdAt', 'ASC']],
+      limit,
+      offset,
     });
     res.json(orders);
   } catch (err) {

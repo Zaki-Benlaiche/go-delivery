@@ -1,5 +1,11 @@
 const { User, Restaurant, Order, Product, Place } = require('../models');
 
+const parsePagination = (req, defaultLimit = 100, maxLimit = 500) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || defaultLimit, 1), maxLimit);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  return { limit, offset };
+};
+
 exports.getStats = async (req, res) => {
   try {
     const userCount = await User.count();
@@ -20,8 +26,12 @@ exports.getStats = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
+    const { limit, offset } = parsePagination(req);
     const users = await User.findAll({
-      attributes: { exclude: ['password'] }
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
     });
     res.json(users);
   } catch (err) {
@@ -31,8 +41,12 @@ exports.getAllUsers = async (req, res) => {
 
 exports.getAllRestaurants = async (req, res) => {
   try {
+    const { limit, offset } = parsePagination(req);
     const restaurants = await Restaurant.findAll({
-      include: [{ model: User, as: 'owner', attributes: ['name', 'email'] }]
+      include: [{ model: User, as: 'owner', attributes: ['name', 'email'] }],
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
     });
     res.json(restaurants);
   } catch (err) {
@@ -42,13 +56,16 @@ exports.getAllRestaurants = async (req, res) => {
 
 exports.getAllOrders = async (req, res) => {
   try {
+    const { limit, offset } = parsePagination(req);
     const orders = await Order.findAll({
       include: [
         { model: User, as: 'customer', attributes: ['name'] },
         { model: Restaurant, as: 'restaurant', attributes: ['name'] },
         { model: User, as: 'driver', attributes: ['name'] }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['createdAt', 'DESC']],
+      limit,
+      offset,
     });
     res.json(orders);
   } catch (err) {

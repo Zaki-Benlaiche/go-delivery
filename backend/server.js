@@ -172,9 +172,15 @@ const seedDatabase = async () => {
 // Start Server
 const PORT = process.env.PORT || 3001;
 
-// `alter: true` adds new columns on boot. Set SYNC_ALTER=0 to skip the schema
-// diff on subsequent restarts once the schema is stable.
-const syncOptions = process.env.SYNC_ALTER === '0' ? {} : { alter: true };
+// `alter: true` adds new columns on boot but is expensive on every restart.
+// Production (DATABASE_URL set) skips it unless SYNC_ALTER=1 is explicitly opted in
+// — schema changes there should go through migrations, not boot-time diffs.
+// Local dev keeps alter for convenience.
+const optIn = process.env.SYNC_ALTER === '1';
+const optOut = process.env.SYNC_ALTER === '0';
+const isProd = !!process.env.DATABASE_URL;
+const shouldAlter = optIn || (!isProd && !optOut);
+const syncOptions = shouldAlter ? { alter: true } : {};
 
 sequelize.sync(syncOptions).then(async () => {
   await seedDatabase();

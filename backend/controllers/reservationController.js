@@ -7,6 +7,12 @@ const todayStart = () => {
     return d;
 };
 
+const parsePagination = (req, defaultLimit = 100, maxLimit = 500) => {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || defaultLimit, 1), maxLimit);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    return { limit, offset };
+};
+
 // 1. Get all places
 exports.getPlaces = async (req, res) => {
     try {
@@ -62,10 +68,13 @@ exports.createReservation = async (req, res, io) => {
 exports.getMyReservations = async (req, res) => {
     try {
         const userId = req.user.id;
+        const { limit, offset } = parsePagination(req, 50, 200);
         const reservations = await Reservation.findAll({
             where: { userId },
             include: [{ model: Place, as: 'place' }],
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'DESC']],
+            limit,
+            offset,
         });
         res.json(reservations);
     } catch (error) {
@@ -103,12 +112,15 @@ exports.cancelReservation = async (req, res, io) => {
 // 5. Admin: Get all reservations (all places, all users)
 exports.getAllReservations = async (req, res) => {
     try {
+        const { limit, offset } = parsePagination(req);
         const reservations = await Reservation.findAll({
             include: [
                 { model: Place, as: 'place' },
                 { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] }
             ],
-            order: [['date', 'DESC'], ['queueNumber', 'ASC']]
+            order: [['date', 'DESC'], ['queueNumber', 'ASC']],
+            limit,
+            offset,
         });
         res.json(reservations);
     } catch (error) {
@@ -207,13 +219,16 @@ exports.getMyPlaceReservations = async (req, res) => {
             return res.status(404).json({ message: 'No place found for this user' });
         }
 
+        const { limit, offset } = parsePagination(req, 100, 500);
         const reservations = await Reservation.findAll({
             where: { placeId: place.id },
             include: [
                 { model: User, as: 'user', attributes: ['id', 'name', 'email', 'phone'] },
                 { model: Place, as: 'place' }
             ],
-            order: [['date', 'DESC'], ['queueNumber', 'ASC']]
+            order: [['date', 'DESC'], ['queueNumber', 'ASC']],
+            limit,
+            offset,
         });
 
         res.json({ place, reservations });
