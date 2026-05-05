@@ -62,10 +62,18 @@ export default function CustomerDashboard() {
     try {
       const res = await api.get<Restaurant[]>('/restaurants');
       setRestaurants(res.data);
-      if (selectedRestaurant) {
-        const updated = res.data.find(r => r.id === selectedRestaurant.id);
-        if (updated) setSelectedRestaurant(updated);
-      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Fetch a single restaurant *with* its products. Used when opening a card
+  // and when the user hits "refresh" inside the menu view.
+  const openRestaurant = async (r: Restaurant) => {
+    setSelectedRestaurant(r);
+    try {
+      const res = await api.get<Restaurant>(`/restaurants/${r.id}`);
+      setSelectedRestaurant(res.data);
     } catch (err) {
       console.error(err);
     }
@@ -326,7 +334,7 @@ export default function CustomerDashboard() {
             ) : (
               <div className="grid grid-3">
                 {filteredRestaurants.map((r) => (
-                  <div key={r.id} className="card" onClick={() => setSelectedRestaurant(r)} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }}>
+                  <div key={r.id} className="card" onClick={() => openRestaurant(r)} style={{ cursor: 'pointer', padding: 0, overflow: 'hidden' }}>
                     <div style={{ height: 'clamp(120px, 20vw, 160px)', background: 'var(--bg-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', position: 'relative', overflow: 'hidden' }}>
                       {renderMedia(r.image, '🏪')}
                       <div style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', padding: '5px', borderRadius: '50%', color: 'white' }}>
@@ -397,7 +405,7 @@ export default function CustomerDashboard() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', margin: 0 }}>Menu</h3>
-                  <button className="btn btn-secondary btn-sm" onClick={loadRestaurants} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.82rem' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => selectedRestaurant && openRestaurant(selectedRestaurant)} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.82rem' }}>
                     Actualiser 🔄
                   </button>
                 </div>

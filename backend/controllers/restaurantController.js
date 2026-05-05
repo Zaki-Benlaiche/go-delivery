@@ -1,10 +1,14 @@
 const { Restaurant, Product } = require('../models');
 
+// List view only needs cards (name, image, address, status). Products are fetched
+// lazily by getRestaurantById when the user opens a specific restaurant — this
+// avoids returning megabytes of base64 product images on the home screen.
 exports.getAllRestaurants = async (req, res) => {
   try {
     const restaurants = await Restaurant.findAll({
       where: { isActive: true },
-      include: [{ model: Product, as: 'products', where: { isAvailable: true }, required: false }],
+      attributes: ['id', 'name', 'description', 'image', 'address', 'isOpen', 'userId'],
+      order: [['id', 'ASC']],
     });
     res.json(restaurants);
   } catch (err) {
