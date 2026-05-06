@@ -44,7 +44,6 @@ exports.register = async (req, res) => {
 
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
 
-    console.log(`✅ User registered: ${email} (${safeRole})`);
     res.status(201).json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
@@ -63,24 +62,18 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required.' });
     }
 
-    console.log(`🔐 Login attempt: ${email}`);
-
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      console.log(`❌ User not found: ${email}`);
       return res.status(404).json({ message: 'User not found.' });
     }
 
     const valid = await bcrypt.compare(password, user.password);
-    console.log(`🔑 Password valid: ${valid}`);
-
     if (!valid) {
       return res.status(401).json({ message: 'Invalid password.' });
     }
 
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
 
-    console.log(`✅ Login success: ${email} (${user.role})`);
     res.json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },

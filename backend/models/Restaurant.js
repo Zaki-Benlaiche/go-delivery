@@ -31,6 +31,11 @@ const Restaurant = sequelize.define('Restaurant', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+}, {
+  indexes: [
+    { fields: ['userId'] },
+    { fields: ['isActive'] },
+  ],
 });
 
 module.exports = Restaurant;

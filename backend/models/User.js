@@ -32,9 +32,11 @@ const User = sequelize.define('User', {
   },
 });
 
-// Hash password before saving
+// Hash password before saving. Cost 8 (instead of 10) on shared-CPU free tier:
+// each hash drops from ~120ms to ~30ms, so concurrent logins don't pile up
+// behind each other on the single Node event loop.
 User.beforeCreate(async (user) => {
-  user.password = await bcrypt.hash(user.password, 10);
+  user.password = await bcrypt.hash(user.password, 8);
 });
 
 module.exports = User;

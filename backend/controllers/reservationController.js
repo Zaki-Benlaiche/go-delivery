@@ -7,6 +7,14 @@ const todayStart = () => {
     return d;
 };
 
+// 30-second cache for the places-with-queue list. Every customer hit on the
+// reservation tab calls this; waitingCount can be slightly stale.
+let placesCache = { data: null, expiresAt: 0 };
+const PLACES_TTL_MS = 30_000;
+
+const invalidatePlacesCache = () => { placesCache.expiresAt = 0; };
+exports.invalidatePlacesCache = invalidatePlacesCache;
+
 const parsePagination = (req, defaultLimit = 100, maxLimit = 500) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || defaultLimit, 1), maxLimit);
     const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
@@ -44,6 +52,8 @@ exports.createReservation = async (req, res, io) => {
             date: startOfDay,
             estimatedWaitMinutes: queueCount * 15,
         });
+
+        invalidatePlacesCache();
 
         const fullReservation = await Reservation.findByPk(newReservation.id, {
             include: [
@@ -98,6 +108,7 @@ exports.cancelReservation = async (req, res, io) => {
 
         reservation.status = 'cancelled';
         await reservation.save();
+        invalidatePlacesCache();
 
         if (io && reservation.place?.userId) {
             io.to(`place_${reservation.place.userId}`).emit('reservation_updated', reservation);
@@ -150,6 +161,8 @@ exports.updateReservationStatus = async (req, res, io) => {
 
         reservation.status = status;
         await reservation.save();
+        // Status flips affect the waitingCount surfaced in /places.
+        if (status === 'done' || status === 'cancelled' || status === 'called') invalidatePlacesCache();
 
         if (io) {
             if (reservation.place?.userId) {
@@ -279,6 +292,11 @@ exports.getQueueInfo = async (req, res) => {
 // 9. Get places with today's queue count (single GROUP BY query — no N+1).
 exports.getPlacesWithQueue = async (req, res) => {
     try {
+        const now = Date.now();
+        if (placesCache.data && placesCache.expiresAt > now) {
+            return res.json(placesCache.data);
+        }
+
         const startOfDay = todayStart();
 
         const places = await Place.findAll({
@@ -299,6 +317,7 @@ exports.getPlacesWithQueue = async (req, res) => {
             order: [['id', 'ASC']],
         });
 
+        placesCache = { data: places, expiresAt: now + PLACES_TTL_MS };
         res.json(places);
     } catch (error) {
         // Fallback path for SQLite (table name unquoted, etc.) — keeps dev environments working.
@@ -313,6 +332,7 @@ exports.getPlacesWithQueue = async (req, res) => {
             });
             const countMap = new Map(counts.map(c => [c.placeId, Number(c.count)]));
             const placesData = places.map(p => ({ ...p.toJSON(), waitingCount: countMap.get(p.id) || 0 }));
+            placesCache = { data: placesData, expiresAt: Date.now() + PLACES_TTL_MS };
             res.json(placesData);
         } catch (e2) {
             res.status(500).json({ message: 'Error', error: e2.message });
@@ -327,6 +347,7 @@ exports.togglePlaceOpenStatus = async (req, res) => {
         if (!place) return res.status(404).json({ message: 'Place not found.' });
 
         await place.update({ isOpen: !place.isOpen });
+        invalidatePlacesCache();
         res.json({ isOpen: place.isOpen });
     } catch (error) {
         res.status(500).json({ message: 'Error toggling place status', error: error.message });
@@ -356,6 +377,7 @@ exports.updatePlace = async (req, res) => {
         if (icon) place.icon = icon;
 
         await place.save();
+        invalidatePlacesCache();
         res.json({ message: 'Place updated', place });
     } catch (error) {
         res.status(500).json({ message: 'Error updating place', error: error.message });

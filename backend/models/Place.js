@@ -33,6 +33,10 @@ const Place = sequelize.define('Place', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
+}, {
+    indexes: [
+        { fields: ['userId'] },
+    ],
 });
 
 module.exports = Place;

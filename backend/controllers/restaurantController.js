@@ -1,15 +1,30 @@
 const { Restaurant, Product } = require('../models');
 
+// 30-second in-memory cache for the public restaurant list. The home screen
+// of every customer hits this on each visit, but the data only changes when
+// owners toggle isOpen or update their card — staleness up to 30s is fine.
+let restaurantsCache = { data: null, expiresAt: 0 };
+const RESTAURANTS_TTL_MS = 30_000;
+
+const invalidateRestaurantsCache = () => { restaurantsCache.expiresAt = 0; };
+exports.invalidateRestaurantsCache = invalidateRestaurantsCache;
+
 // List view only needs cards (name, image, address, status). Products are fetched
 // lazily by getRestaurantById when the user opens a specific restaurant — this
 // avoids returning megabytes of base64 product images on the home screen.
 exports.getAllRestaurants = async (req, res) => {
   try {
+    const now = Date.now();
+    if (restaurantsCache.data && restaurantsCache.expiresAt > now) {
+      return res.json(restaurantsCache.data);
+    }
+
     const restaurants = await Restaurant.findAll({
       where: { isActive: true },
       attributes: ['id', 'name', 'description', 'image', 'address', 'isOpen', 'userId'],
       order: [['id', 'ASC']],
     });
+    restaurantsCache = { data: restaurants, expiresAt: now + RESTAURANTS_TTL_MS };
     res.json(restaurants);
   } catch (err) {
     res.status(500).json({ message: 'Server error.', error: err.message });
@@ -34,6 +49,7 @@ exports.updateRestaurant = async (req, res) => {
     if (!restaurant) return res.status(404).json({ message: 'Restaurant not found.' });
 
     await restaurant.update(req.body);
+    invalidateRestaurantsCache();
     res.json(restaurant);
   } catch (err) {
     res.status(500).json({ message: 'Server error.', error: err.message });
@@ -73,6 +89,7 @@ exports.toggleOpenStatus = async (req, res) => {
     if (!restaurant) return res.status(404).json({ message: 'Restaurant not found.' });
 
     await restaurant.update({ isOpen: !restaurant.isOpen });
+    invalidateRestaurantsCache();
     res.json({ isOpen: restaurant.isOpen });
   } catch (err) {
     res.status(500).json({ message: 'Server error.', error: err.message });
