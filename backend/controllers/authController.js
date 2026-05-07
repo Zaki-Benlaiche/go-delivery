@@ -5,7 +5,7 @@ const { SECRET } = require('../middleware/auth');
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { name, email, password, role, phone, restaurantType } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email and password are required.' });
@@ -22,11 +22,17 @@ exports.register = async (req, res) => {
 
     const user = await User.create({ name, email, password, role: safeRole, phone: phone || '' });
 
-    // If registering as restaurant, create a restaurant entry
+    // If registering as restaurant, create a restaurant entry. The restaurant
+    // role covers three sub-types: a normal menu-based restaurant, a superette
+    // (small grocery), or a boucherie (butcher). The two latter operate on a
+    // shopping-list flow rather than a fixed menu.
     if (safeRole === 'restaurant') {
+      const allowedTypes = ['restaurant', 'superette', 'boucherie'];
+      const safeType = allowedTypes.includes(restaurantType) ? restaurantType : 'restaurant';
       await Restaurant.create({
-        name: `${name}'s Restaurant`,
+        name: `${name}'s Shop`,
         userId: user.id,
+        type: safeType,
       });
     }
 

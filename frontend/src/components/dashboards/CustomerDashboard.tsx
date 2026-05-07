@@ -28,6 +28,9 @@ export default function CustomerDashboard() {
 
   const [appMode, setAppMode] = useState<'delivery' | 'reservation'>('delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  // Free-text shopping list for superette/boucherie orders. Replaces the cart
+  // when the selected vendor is not a regular restaurant.
+  const [shoppingListText, setShoppingListText] = useState('');
 
   const [bookingPlaceId, setBookingPlaceId] = useState<number | null>(null);
 
@@ -101,15 +104,28 @@ export default function CustomerDashboard() {
     });
   };
 
+  const isShoppingFlow = selectedRestaurant?.type === 'superette' || selectedRestaurant?.type === 'boucherie';
+
   const handleOrder = async () => {
-    if (!selectedRestaurant || Object.keys(cart).length === 0) return;
-    setIsOrdering(true);
-    const items = Object.entries(cart).map(([productId, quantity]) => ({
-      productId: Number(productId),
-      quantity,
-    }));
-    await createOrder(selectedRestaurant.id, items, deliveryAddress.trim() || 'Adresse non précisée');
-    setCart({});
+    if (!selectedRestaurant) return;
+    const address = deliveryAddress.trim() || 'Adresse non précisée';
+
+    if (isShoppingFlow) {
+      if (!shoppingListText.trim()) return;
+      setIsOrdering(true);
+      await createOrder(selectedRestaurant.id, [], address, shoppingListText.trim());
+      setShoppingListText('');
+    } else {
+      if (Object.keys(cart).length === 0) return;
+      setIsOrdering(true);
+      const items = Object.entries(cart).map(([productId, quantity]) => ({
+        productId: Number(productId),
+        quantity,
+      }));
+      await createOrder(selectedRestaurant.id, items, address);
+      setCart({});
+    }
+
     setDeliveryAddress('');
     setSelectedRestaurant(null);
     setIsOrdering(false);
@@ -123,6 +139,67 @@ export default function CustomerDashboard() {
   const totalItemsCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
 
   const filteredRestaurants = restaurants.filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.address.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // Shopping-flow checkout: no item-level total since the driver fills the
+  // receipt amount on delivery. Customer just confirms address + list and pays
+  // (receipt + delivery) on arrival.
+  const renderShoppingPanel = (isMobile: boolean) => (
+    <div className={!isMobile ? "card" : ""} style={{ padding: isMobile ? 0 : '20px', boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.3)', border: isMobile ? 'none' : '1px solid rgba(46,213,115,0.2)' }}>
+      <h3 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', fontSize: 'clamp(1rem, 3vw, 1.2rem)', borderBottom: '1px solid var(--border)', paddingBottom: '14px' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ClipboardList size={18} color="#16a085" /> Récapitulatif
+        </span>
+        {isMobile && (
+          <button onClick={() => setIsMobileCartOpen(false)} style={{ background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <X size={18} />
+          </button>
+        )}
+      </h3>
+
+      <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '10px', marginBottom: '14px', maxHeight: isMobile ? '30vh' : '200px', overflowY: 'auto' }}>
+        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Votre liste</div>
+        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.88rem', margin: 0, lineHeight: 1.6 }}>
+          {shoppingListText.trim() || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Liste vide</span>}
+        </pre>
+      </div>
+
+      <div style={{ marginBottom: '14px' }}>
+        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px' }}>
+          Adresse de livraison
+        </label>
+        <input
+          type="text"
+          placeholder="Ex: Rue des Lilas, Appt 3B, Alger..."
+          value={deliveryAddress}
+          onChange={(e) => setDeliveryAddress(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px', borderRadius: '8px',
+            border: `1px solid ${deliveryAddress ? '#16a085' : 'var(--border)'}`,
+            background: 'var(--bg-elevated)', color: 'var(--text)',
+            fontSize: '0.85rem', fontFamily: 'inherit', outline: 'none',
+            boxSizing: 'border-box', transition: 'border-color 0.2s',
+          }}
+        />
+      </div>
+
+      <div style={{ background: 'var(--info-glow)', color: '#1e90ff', padding: '10px', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', gap: '6px', marginBottom: '20px', alignItems: 'flex-start' }}>
+        <Info size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+        <span>Le prix final sera fixé par le livreur après l&apos;achat (ticket de caisse + livraison). Paiement en espèces à la livraison.</span>
+      </div>
+
+      <button
+        className="btn btn-primary btn-block"
+        onClick={() => {
+          handleOrder();
+          if (isMobile) setIsMobileCartOpen(false);
+        }}
+        disabled={isOrdering || !shoppingListText.trim()}
+        style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', padding: '14px', borderRadius: '12px', background: '#16a085' }}
+      >
+        {isOrdering ? 'Envoi...' : 'Envoyer la commande'}
+      </button>
+    </div>
+  );
 
   const renderCartContent = (isMobile: boolean) => (
     <div className={!isMobile ? "card" : ""} style={{ padding: isMobile ? 0 : '20px', boxShadow: isMobile ? 'none' : '0 20px 40px rgba(0,0,0,0.3)', border: isMobile ? 'none' : '1px solid rgba(255,71,87,0.2)' }}>
@@ -348,6 +425,11 @@ export default function CustomerDashboard() {
                       <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'var(--bg-card)', padding: '5px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <Clock size={11} color="var(--primary)" /> 30-40 min
                       </div>
+                      {r.type && r.type !== 'restaurant' && (
+                        <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: r.type === 'boucherie' ? '#c0392b' : '#16a085', color: 'white', padding: '5px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700 }}>
+                          {r.type === 'boucherie' ? '🥩 Boucherie' : '🛒 Supérette'}
+                        </div>
+                      )}
                     </div>
                     <div style={{ padding: 'clamp(14px, 3vw, 20px)' }}>
                       <h3 style={{ fontSize: 'clamp(0.95rem, 2.5vw, 1.2rem)', margin: '0 0 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</h3>
@@ -404,13 +486,41 @@ export default function CustomerDashboard() {
             <div className="customer-layout">
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                  <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', margin: 0 }}>Menu</h3>
-                  <button className="btn btn-secondary btn-sm" onClick={() => selectedRestaurant && openRestaurant(selectedRestaurant)} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.82rem' }}>
-                    Actualiser 🔄
-                  </button>
+                  <h3 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', margin: 0 }}>
+                    {isShoppingFlow ? (selectedRestaurant.type === 'boucherie' ? '🥩 Liste de courses' : '🛒 Liste de courses') : 'Menu'}
+                  </h3>
+                  {!isShoppingFlow && (
+                    <button className="btn btn-secondary btn-sm" onClick={() => selectedRestaurant && openRestaurant(selectedRestaurant)} style={{ background: 'transparent', border: 'none', color: 'var(--primary)', fontSize: '0.82rem' }}>
+                      Actualiser 🔄
+                    </button>
+                  )}
                 </div>
 
-                {(!selectedRestaurant.products || selectedRestaurant.products.length === 0) ? (
+                {isShoppingFlow ? (
+                  <div className="card" style={{ padding: 'clamp(16px, 3vw, 24px)' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '14px' }}>
+                      Écrivez tout ce que vous voulez acheter. Le livreur ira au {selectedRestaurant.type === 'boucherie' ? 'boucher' : 'supérette'} et achètera pour vous. Le prix final dépend du ticket de caisse.
+                    </p>
+                    <textarea
+                      value={shoppingListText}
+                      onChange={(e) => setShoppingListText(e.target.value)}
+                      placeholder={selectedRestaurant.type === 'boucherie'
+                        ? 'Ex:\n- 1 kg viande hachée\n- 500g escalope poulet\n- 4 merguez'
+                        : 'Ex:\n- 2 baguettes\n- 1 L de lait\n- 6 œufs\n- Tomates, oignons'}
+                      rows={8}
+                      style={{
+                        width: '100%', padding: '14px', borderRadius: '12px',
+                        border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text)',
+                        fontSize: '0.95rem', fontFamily: 'inherit', outline: 'none',
+                        resize: 'vertical', boxSizing: 'border-box', lineHeight: 1.6,
+                      }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      <span>{shoppingListText.length} caractères</span>
+                      <span>Une ligne par article</span>
+                    </div>
+                  </div>
+                ) : (!selectedRestaurant.products || selectedRestaurant.products.length === 0) ? (
                   <div className="empty-state" style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)' }}>
                     <Utensils size={30} style={{ opacity: 0.3, marginBottom: '10px' }} />
                     <p>Ce restaurant n&apos;a pas encore de plat.</p>
@@ -451,14 +561,14 @@ export default function CustomerDashboard() {
               </div>
 
               <div className="desktop-cart">
-                {renderCartContent(false)}
+                {isShoppingFlow ? renderShoppingPanel(false) : renderCartContent(false)}
               </div>
             </div>
           </div>
         )}
 
         {/* Mobile Cart Bar */}
-        {activeTab === 'explore' && selectedRestaurant && totalItemsCount > 0 && (
+        {activeTab === 'explore' && selectedRestaurant && !isShoppingFlow && totalItemsCount > 0 && (
           <div className="mobile-cart-bar" onClick={() => setIsMobileCartOpen(true)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: 'rgba(255,255,255,0.25)', borderRadius: '50%', fontWeight: 800, fontSize: '0.85rem', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -474,8 +584,20 @@ export default function CustomerDashboard() {
         {isMobileCartOpen && (
           <div className="mobile-cart-overlay" onClick={() => setIsMobileCartOpen(false)}>
             <div className="mobile-cart-sheet" onClick={(e) => e.stopPropagation()}>
-              {renderCartContent(true)}
+              {isShoppingFlow ? renderShoppingPanel(true) : renderCartContent(true)}
             </div>
+          </div>
+        )}
+
+        {/* Mobile bar for shopping-flow vendors — shows the "place order" CTA
+            since there's no cart total to display until the driver shops. */}
+        {activeTab === 'explore' && selectedRestaurant && isShoppingFlow && shoppingListText.trim().length > 0 && (
+          <div className="mobile-cart-bar" onClick={() => setIsMobileCartOpen(true)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ClipboardList size={20} />
+              <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Voir la liste</span>
+            </div>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>Commander →</span>
           </div>
         )}
 
@@ -553,17 +675,23 @@ export default function CustomerDashboard() {
                                 ))}
                               </div>
 
-                              {/* Items */}
+                              {/* Items / Shopping list */}
                               <div style={{ background: 'var(--bg)', padding: '14px', borderRadius: '10px' }}>
-                                <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Détails</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                  {order.items?.map(item => (
-                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                                      <span><strong style={{ color: 'var(--primary)' }}>{item.quantity}x</strong> {item.product?.name}</span>
-                                      <span style={{ flexShrink: 0 }}>{item.price * item.quantity} DA</span>
-                                    </div>
-                                  ))}
-                                </div>
+                                <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-muted)', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                  {order.shoppingList ? 'Liste de courses' : 'Détails'}
+                                </h4>
+                                {order.shoppingList ? (
+                                  <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.88rem', margin: 0, lineHeight: 1.6 }}>{order.shoppingList}</pre>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {order.items?.map(item => (
+                                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
+                                        <span><strong style={{ color: 'var(--primary)' }}>{item.quantity}x</strong> {item.product?.name}</span>
+                                        <span style={{ flexShrink: 0 }}>{item.price * item.quantity} DA</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
 
                               {/* Driver */}

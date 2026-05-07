@@ -24,7 +24,7 @@ exports.getAllRestaurants = async (req, res) => {
 
     const restaurants = await Restaurant.findAll({
       where: { isActive: true },
-      attributes: ['id', 'name', 'description', 'image', 'address', 'isOpen', 'userId'],
+      attributes: ['id', 'name', 'description', 'image', 'address', 'isOpen', 'userId', 'type'],
       order: [['id', 'ASC']],
     });
     restaurantsCache = { data: restaurants, expiresAt: now + RESTAURANTS_TTL_MS };

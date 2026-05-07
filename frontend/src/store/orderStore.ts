@@ -11,8 +11,8 @@ interface OrderState {
   isLoading: boolean;
   fetchOrders: () => Promise<void>;
   fetchAvailableOrders: () => Promise<void>;
-  createOrder: (restaurantId: number, items: { productId: number; quantity: number }[], deliveryAddress: string) => Promise<void>;
-  updateStatus: (orderId: number, status: string, opts?: { deliveryFee?: number }) => Promise<void>;
+  createOrder: (restaurantId: number, items: { productId: number; quantity: number }[], deliveryAddress: string, shoppingList?: string) => Promise<void>;
+  updateStatus: (orderId: number, status: string, opts?: { deliveryFee?: number; total?: number }) => Promise<void>;
   listenToSocket: () => () => void;
 }
 
@@ -51,9 +51,9 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     }
   },
 
-  createOrder: async (restaurantId, items, deliveryAddress) => {
+  createOrder: async (restaurantId, items, deliveryAddress, shoppingList) => {
     try {
-      await api.post('/orders', { restaurantId, items, deliveryAddress });
+      await api.post('/orders', { restaurantId, items, deliveryAddress, shoppingList });
       await get().fetchOrders();
     } catch (err) {
       console.error('createOrder error:', err);
@@ -62,8 +62,9 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
   updateStatus: async (orderId, status, opts) => {
     try {
-      const body: { status: string; deliveryFee?: number } = { status };
+      const body: { status: string; deliveryFee?: number; total?: number } = { status };
       if (opts?.deliveryFee !== undefined) body.deliveryFee = opts.deliveryFee;
+      if (opts?.total !== undefined) body.total = opts.total;
       await api.put(`/orders/${orderId}/status`, body);
       // Don't refetch — the server's socket event keeps state in sync, and a
       // second HTTP round-trip on every action just slows the UI down.

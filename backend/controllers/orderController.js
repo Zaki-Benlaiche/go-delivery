@@ -19,29 +19,40 @@ const parsePagination = (req, defaultLimit = 50, maxLimit = 200) => {
 
 exports.createOrder = async (req, res, io) => {
   try {
-    const { restaurantId, items, deliveryAddress } = req.body;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: 'Order must have at least one item.' });
-    }
+    const { restaurantId, items, deliveryAddress, shoppingList } = req.body;
 
     const restaurant = await Restaurant.findByPk(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ message: 'Restaurant not found.' });
     }
 
-    // Bulk fetch products in a single query — replaces N+1 loop.
-    const productIds = items.map(i => i.productId);
-    const products = await Product.findAll({ where: { id: productIds } });
-    const productMap = new Map(products.map(p => [p.id, p]));
+    const isShoppingFlow = restaurant.type === 'superette' || restaurant.type === 'boucherie';
+
+    // Branch by vendor type. Restaurants need at least one menu item; shopping
+    // flow shops need a non-empty list (the driver buys based on this text).
+    if (isShoppingFlow) {
+      if (!shoppingList || !shoppingList.trim()) {
+        return res.status(400).json({ message: 'La liste de courses est obligatoire.' });
+      }
+    } else if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Order must have at least one item.' });
+    }
 
     let total = 0;
-    const orderItemsPayload = [];
-    for (const item of items) {
-      const product = productMap.get(item.productId);
-      if (!product) continue;
-      total += product.price * item.quantity;
-      orderItemsPayload.push({ productId: item.productId, quantity: item.quantity, price: product.price });
+    let orderItemsPayload = [];
+
+    if (!isShoppingFlow) {
+      // Menu order — bulk fetch products in a single query (no N+1) and total up.
+      const productIds = items.map(i => i.productId);
+      const products = await Product.findAll({ where: { id: productIds } });
+      const productMap = new Map(products.map(p => [p.id, p]));
+
+      for (const item of items) {
+        const product = productMap.get(item.productId);
+        if (!product) continue;
+        total += product.price * item.quantity;
+        orderItemsPayload.push({ productId: item.productId, quantity: item.quantity, price: product.price });
+      }
     }
 
     const order = await Order.create({
@@ -50,18 +61,28 @@ exports.createOrder = async (req, res, io) => {
       deliveryAddress,
       total,
       deliveryFee: 0,
-      status: 'pending',
+      status: isShoppingFlow ? 'ready' : 'pending',
+      shoppingList: isShoppingFlow ? shoppingList.trim() : null,
     });
 
-    // Bulk create order items
-    await OrderItem.bulkCreate(orderItemsPayload.map(p => ({ ...p, orderId: order.id })));
+    if (orderItemsPayload.length > 0) {
+      await OrderItem.bulkCreate(orderItemsPayload.map(p => ({ ...p, orderId: order.id })));
+    }
 
     const fullOrder = await Order.findByPk(order.id, { include: ORDER_INCLUDE });
 
-    // Targeted notification: only the restaurant that owns this order needs to know.
-    io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
-    // Customer also gets the confirmation event in their personal room.
+    // Customer always gets the confirmation event in their personal room.
     io.to(`client_${req.user.id}`).emit('new_order', fullOrder);
+
+    if (isShoppingFlow) {
+      // Shopping-list shops don't process orders — push directly to drivers
+      // so anyone available can claim the run, buy on the customer's behalf,
+      // and fill in the receipt total at delivery time.
+      io.to('drivers').emit('order_ready_for_pickup', fullOrder);
+    } else {
+      // Menu restaurant — owner accepts/prepares before drivers see it.
+      io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
+    }
 
     res.status(201).json(fullOrder);
   } catch (err) {
@@ -122,7 +143,7 @@ exports.getAvailableOrders = async (req, res) => {
 exports.updateOrderStatus = async (req, res, io) => {
   try {
     const { id } = req.params;
-    const { status, deliveryFee } = req.body;
+    const { status, deliveryFee, total } = req.body;
 
     const order = await Order.findByPk(id);
     if (!order) return res.status(404).json({ message: 'Order not found.' });
@@ -136,6 +157,16 @@ exports.updateOrderStatus = async (req, res, io) => {
       const fee = Number(deliveryFee);
       if (Number.isFinite(fee) && fee >= 0) {
         order.deliveryFee = fee;
+      }
+    }
+
+    // Driver fills the receipt total when delivering a shopping-list order
+    // (superette/boucherie). For menu orders the total is locked at creation
+    // and ignored here.
+    if (req.user.role === 'driver' && order.shoppingList && total !== undefined) {
+      const t = Number(total);
+      if (Number.isFinite(t) && t >= 0) {
+        order.total = t;
       }
     }
 

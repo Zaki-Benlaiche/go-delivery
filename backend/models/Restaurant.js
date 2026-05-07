@@ -31,10 +31,19 @@ const Restaurant = sequelize.define('Restaurant', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  // Vendor type: regular restaurant (menu-based) or shopping-list shops
+  // (superette/boucherie). Shopping-list shops don't see incoming orders —
+  // the driver receives a free-text list and buys on the customer's behalf.
+  type: {
+    type: DataTypes.ENUM('restaurant', 'superette', 'boucherie'),
+    allowNull: false,
+    defaultValue: 'restaurant',
+  },
 }, {
   indexes: [
     { fields: ['userId'] },
     { fields: ['isActive'] },
+    { fields: ['type'] },
   ],
 });
 

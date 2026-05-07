@@ -5,17 +5,20 @@ import { useOrderStore } from '@/store/orderStore';
 import { useMenuStore } from '@/store/menuStore';
 import StatusBadge from '@/components/StatusBadge';
 import type { OrderStatus, Product } from '@/types';
-import { ChefHat, Clock, CheckCircle, Flame, User, Phone, CheckCircle2, Truck, Package, Plus, Trash2, Settings, Coffee, Upload, Utensils } from 'lucide-react';
+import { ChefHat, Clock, CheckCircle, Flame, User, Phone, CheckCircle2, Truck, Package, Plus, Trash2, Settings, Coffee, Upload, Utensils, Pencil } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 
 export default function RestaurantDashboard() {
   const { orders, fetchOrders, updateStatus } = useOrderStore();
-  const { products, restaurant, fetchMenu, updateRestaurant, toggleOpenStatus, addProduct, deleteProduct } = useMenuStore();
+  const { products, restaurant, fetchMenu, updateRestaurant, toggleOpenStatus, addProduct, updateProduct, deleteProduct } = useMenuStore();
   const { addNotification } = useNotificationStore();
 
   const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'settings'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProduct, setNewProduct] = useState({ name: '', price: '', category: 'Plats', image: '🍽️' });
+  // Editing reuses the same modal as Add — when set, the modal switches to update mode.
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editDraft, setEditDraft] = useState({ name: '', price: '', category: '', image: '' });
   // Controlled state for Settings image field — avoids document.getElementById anti-pattern
   const [settingsImage, setSettingsImage] = useState('');
 
@@ -66,6 +69,37 @@ export default function RestaurantDashboard() {
 
     setShowAddModal(false);
     setNewProduct({ name: '', price: '', category: 'Plats', image: '🍽️' });
+  };
+
+  const beginEdit = (product: Product) => {
+    setEditingProduct(product);
+    setEditDraft({
+      name: product.name,
+      price: String(product.price),
+      category: product.category || '',
+      image: product.image || '',
+    });
+  };
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct || !editDraft.name || !editDraft.price) return;
+
+    await updateProduct(editingProduct.id, {
+      name: editDraft.name,
+      price: Number(editDraft.price),
+      category: editDraft.category,
+      image: editDraft.image,
+    });
+
+    setEditingProduct(null);
+    addNotification({
+      type: 'info',
+      title: 'Produit mis à jour',
+      message: `${editDraft.name} — ${editDraft.price} DA`,
+      icon: '✅',
+      color: '#2ed573',
+    });
   };
 
   const tabs = [
@@ -304,10 +338,17 @@ export default function RestaurantDashboard() {
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--bg)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
                     {product.category}
                   </span>
-                  <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
                     <button
-                      className="btn btn-secondary btn-block btn-sm"
-                      style={{ color: 'var(--danger)' }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ flex: 1, color: 'var(--primary)' }}
+                      onClick={() => beginEdit(product)}
+                    >
+                      <Pencil size={14} /> Modifier
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      style={{ flex: 1, color: 'var(--danger)' }}
                       onClick={() => deleteProduct(product.id)}
                     >
                       <Trash2 size={14} /> Supprimer
@@ -320,6 +361,58 @@ export default function RestaurantDashboard() {
               <p style={{ gridColumn: '1 / -1', color: 'var(--text-muted)', textAlign: 'center', padding: '40px 0' }}>Aucun produit dans le menu.</p>
             )}
           </div>
+
+          {/* Edit Product Modal */}
+          {editingProduct && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+              background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
+              zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px'
+            }}>
+              <div className="card fade-in" style={{ width: '100%', maxWidth: '480px', border: '1px solid var(--primary-glow)' }}>
+                <h2 style={{ marginBottom: '20px', fontSize: 'clamp(1rem, 3vw, 1.3rem)' }}>Modifier le produit</h2>
+                <form onSubmit={handleEditProduct} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Nom du produit</label>
+                    <input type="text" required value={editDraft.name} onChange={e => setEditDraft({ ...editDraft, name: e.target.value })} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Prix (DA)</label>
+                      <input type="number" required min={0} value={editDraft.price} onChange={e => setEditDraft({ ...editDraft, price: e.target.value })} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Catégorie</label>
+                      <input type="text" value={editDraft.category} onChange={e => setEditDraft({ ...editDraft, category: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label>Image (Fichier ou URL)</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input type="text" placeholder="URL ou Emoji" value={editDraft.image} onChange={e => setEditDraft({ ...editDraft, image: e.target.value })} style={{ flex: 1 }} />
+                      <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', flexShrink: 0 }}>
+                        <Upload size={14} /> <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, (b) => setEditDraft({ ...editDraft, image: b }))} />
+                      </label>
+                    </div>
+                    {editDraft.image && (
+                      <div style={{ marginTop: '8px', height: '70px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+                        {editDraft.image.startsWith('http') || editDraft.image.startsWith('data:') ? (
+                          <img src={editDraft.image} alt="Preview" style={{ height: '100%', width: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <span style={{ fontSize: '1.8rem' }}>{editDraft.image}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditingProduct(null)}>Annuler</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Enregistrer</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* Add Product Modal */}
           {showAddModal && (

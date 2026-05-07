@@ -31,6 +31,13 @@ const Order = sequelize.define('Order', {
     type: DataTypes.STRING,
     defaultValue: '',
   },
+  // Free-text list for superette/boucherie orders. When set, the order has
+  // no menu items — the driver reads this list, shops, and fills `total`
+  // with the receipt amount before confirming delivery.
+  shoppingList: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 }, {
   indexes: [
     { fields: ['status'] },

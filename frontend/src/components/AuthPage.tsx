@@ -22,6 +22,11 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
 
+  // Restaurant sub-type — chooses between menu-based (restaurant) and
+  // shopping-list flow (superette/boucherie). Backend defaults to 'restaurant'
+  // when missing, so this only matters during registration.
+  const [restaurantType, setRestaurantType] = useState<'restaurant' | 'superette' | 'boucherie'>('restaurant');
+
   // Établissement-specific fields
   const [placeName, setPlaceName] = useState('');
   const [placeAddress, setPlaceAddress] = useState('');
@@ -38,7 +43,7 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
       if (isLogin) {
         await login(email, password);
       } else {
-        await register(name, email, password, role, phone);
+        await register(name, email, password, role, phone, role === 'restaurant' ? restaurantType : undefined);
 
         // If place, update place info after registration
         if (role === 'place' && placeName) {
@@ -117,11 +122,28 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
                 <label>Rôle</label>
                 <select value={role} onChange={(e) => setRole(e.target.value)}>
                   <option value="client">👤 Client</option>
-                  <option value="restaurant">🍽️ Restaurant</option>
+                  <option value="restaurant">🍽️ Commerce (Restaurant / Supérette / Boucherie)</option>
                   <option value="driver">🚚 Livreur</option>
                   <option value="place">🏢 Établissement (Médecin, Poste...)</option>
                 </select>
               </div>
+
+              {role === 'restaurant' && (
+                <div className="form-group">
+                  <label>Type de commerce</label>
+                  <select value={restaurantType} onChange={(e) => setRestaurantType(e.target.value as 'restaurant' | 'superette' | 'boucherie')}>
+                    <option value="restaurant">🍽️ Restaurant (menu)</option>
+                    <option value="superette">🛒 Supérette (liste de courses)</option>
+                    <option value="boucherie">🥩 Boucherie (liste de courses)</option>
+                  </select>
+                  {restaurantType !== 'restaurant' && (
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      Le client envoie une liste, le livreur achète et livre.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="form-group">
                 <label>Téléphone</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="06 00 00 00 00" />
