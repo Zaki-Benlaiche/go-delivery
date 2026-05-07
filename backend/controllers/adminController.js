@@ -8,16 +8,18 @@ const parsePagination = (req, defaultLimit = 100, maxLimit = 500) => {
 
 exports.getStats = async (req, res) => {
   try {
-    const userCount = await User.count();
-    const restaurantCount = await Restaurant.count();
-    const orderCount = await Order.count();
-    const totalRevenue = await Order.sum('total') || 0;
+    const [userCount, restaurantCount, orderCount, totalRevenue] = await Promise.all([
+      User.count(),
+      Restaurant.count(),
+      Order.count(),
+      Order.sum('total'),
+    ]);
 
     res.json({
       users: userCount,
       restaurants: restaurantCount,
       orders: orderCount,
-      revenue: totalRevenue
+      revenue: totalRevenue || 0,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error fetching stats', error: err.message });

@@ -293,6 +293,8 @@ exports.getQueueInfo = async (req, res) => {
 exports.getPlacesWithQueue = async (req, res) => {
     try {
         const now = Date.now();
+        // Browser/APK cache the list for 20s; matches the server-side TTL window.
+        res.set('Cache-Control', 'public, max-age=20');
         if (placesCache.data && placesCache.expiresAt > now) {
             return res.json(placesCache.data);
         }

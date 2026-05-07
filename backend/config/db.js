@@ -1,13 +1,9 @@
 const { Sequelize } = require('sequelize');
-const dns = require('dns');
-
-// Fix for Supabase IPv6 resolution
-dns.setDefaultResultOrder('verbatim');
 
 let sequelize;
 
 if (process.env.DATABASE_URL) {
-  // Production: PostgreSQL (Supabase)
+  // Production: PostgreSQL (Neon — pooled connection recommended)
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {

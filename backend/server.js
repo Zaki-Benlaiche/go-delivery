@@ -46,6 +46,11 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Lightweight health probe — no DB hit. Point an external uptime pinger
+// (e.g. UptimeRobot, every 14min) at this URL to prevent Render's free dyno
+// from sleeping after 15min idle and avoid the 30s cold-start on first user.
+app.get('/healthz', (req, res) => res.status(200).send('ok'));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);

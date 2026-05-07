@@ -15,6 +15,9 @@ exports.invalidateRestaurantsCache = invalidateRestaurantsCache;
 exports.getAllRestaurants = async (req, res) => {
   try {
     const now = Date.now();
+    // Tell APK/browser caches to reuse this response for up to 20s — saves the
+    // network round-trip entirely on rapid re-renders of the home screen.
+    res.set('Cache-Control', 'public, max-age=20');
     if (restaurantsCache.data && restaurantsCache.expiresAt > now) {
       return res.json(restaurantsCache.data);
     }
