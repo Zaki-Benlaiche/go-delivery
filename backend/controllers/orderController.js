@@ -1,9 +1,21 @@
 const { Order, OrderItem, Product, Restaurant, User } = require('../models');
 
-// Shared include used by every order fetch — keeps payloads consistent.
+// Shared include used by every order fetch. Attributes are tightened on the
+// nested entities to avoid pulling base64 product images and long restaurant
+// descriptions on every list-view round-trip — these payloads were the single
+// largest contributor to /orders response size before the cut.
 const ORDER_INCLUDE = [
-  { model: OrderItem, as: 'items', include: [{ model: Product, as: 'product' }] },
-  { model: Restaurant, as: 'restaurant' },
+  {
+    model: OrderItem,
+    as: 'items',
+    attributes: ['id', 'quantity', 'price', 'productId'],
+    include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'price', 'category'] }],
+  },
+  {
+    model: Restaurant,
+    as: 'restaurant',
+    attributes: ['id', 'name', 'image', 'address', 'isOpen', 'userId', 'type'],
+  },
   { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
   { model: User, as: 'driver', attributes: ['id', 'name', 'phone'] },
 ];
@@ -123,10 +135,15 @@ exports.getOrders = async (req, res) => {
 exports.getAvailableOrders = async (req, res) => {
   try {
     const { limit, offset } = parsePagination(req, 100, 200);
+    // Drivers' "available" feed is hot — every connected driver re-pulls it on
+    // every socket nudge. Strip everything they don't need to render the card:
+    // no order items (they pick up the bag, they don't read the menu), and only
+    // the restaurant fields the card actually displays.
     const orders = await Order.findAll({
       where: { status: 'ready', driverId: null },
+      attributes: ['id', 'status', 'total', 'deliveryAddress', 'shoppingList', 'createdAt', 'restaurantId', 'customerId'],
       include: [
-        { model: Restaurant, as: 'restaurant' },
+        { model: Restaurant, as: 'restaurant', attributes: ['id', 'name', 'image', 'address', 'type'] },
         { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
       ],
       order: [['createdAt', 'ASC']],

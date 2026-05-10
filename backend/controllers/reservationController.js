@@ -299,8 +299,9 @@ exports.getPlacesWithQueue = async (req, res) => {
             return res.json(placesCache.data);
         }
 
-        const startOfDay = todayStart();
-
+        // Use CURRENT_DATE on the DB side instead of interpolating a JS-built
+        // string — safer (no chance of SQL injection, even from internal code)
+        // and cheaper since Postgres can constant-fold it.
         const places = await Place.findAll({
             attributes: {
                 include: [
@@ -309,7 +310,7 @@ exports.getPlacesWithQueue = async (req, res) => {
                             SELECT COUNT(*)
                             FROM "Reservations" AS r
                             WHERE r."placeId" = "Place"."id"
-                              AND r."date" = '${startOfDay.toISOString().split('T')[0]}'
+                              AND r."date" = CURRENT_DATE
                               AND r."status" = 'waiting'
                         )`),
                         'waitingCount'

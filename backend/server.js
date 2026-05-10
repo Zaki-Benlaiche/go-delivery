@@ -2,16 +2,13 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const pinoHttp = require('pino-http');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-let compression;
-try {
-  compression = require('compression');
-} catch {
-  compression = null; // Optional dep; if missing the app still runs, just without gzip.
-}
-
+const logger = require('./lib/logger');
 const { sequelize, User, Restaurant, Product, Place } = require('./models');
 const { SECRET } = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
@@ -21,9 +18,15 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 const server = http.createServer(app);
 
-// CORS: restrict to specific origin only when FRONTEND_URL is explicitly set.
-// Without it (common on fresh deploys), fall back to open — safe because
-// the app also runs as a mobile APK which sends no Origin header.
+// Trust the first proxy hop so req.ip reflects the real client (Render/Fly
+// terminate TLS upstream). Without this, every request looks like the same IP
+// and the rate limiter fires on the proxy rather than the abuser.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.disable('etag');
+
+// CORS: lock down when FRONTEND_URL is set; otherwise stay open so the APK
+// (which sends no Origin header) keeps working on first deploy.
 const corsOrigin = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001']
   : '*';
@@ -31,25 +34,79 @@ const corsOrigin = process.env.FRONTEND_URL
 const corsOptions = {
   origin: corsOrigin,
   credentials: true,
+  maxAge: 86400, // browsers cache the preflight for 24h instead of asking on every call
 };
 
-// Socket.io always stays open for mobile APK compatibility
 const io = new Server(server, {
   cors: { origin: '*' },
-  // Tighter ping config — drop dead clients faster on a busy server.
+  // Drop dead clients quickly — a stuck mobile connection shouldn't hold a slot.
   pingInterval: 25000,
   pingTimeout: 20000,
+  // Compress only payloads above 1KB; below that, the CPU cost beats the savings.
+  perMessageDeflate: { threshold: 1024 },
+  // 1MB cap kills oversized frames that could DoS a single worker.
+  maxHttpBufferSize: 1e6,
+  transports: ['websocket', 'polling'],
 });
 
-if (compression) app.use(compression());
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// --- Middleware order matters ---
+// helmet first (security headers on every response, including errors).
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // APK loads inline scripts; CSP needs separate work.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
-// Lightweight health probe — no DB hit. Point an external uptime pinger
-// (e.g. UptimeRobot, every 14min) at this URL to prevent Render's free dyno
-// from sleeping after 15min idle and avoid the 30s cold-start on first user.
+// gzip after helmet so headers are set, but before routes so responses are compressed.
+app.use(
+  compression({
+    threshold: 1024,
+    level: 6,
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    },
+  })
+);
+
+app.use(cors(corsOptions));
+
+// Structured logger. Skip the noisy /healthz pings so logs stay readable.
+app.use(
+  pinoHttp({
+    logger,
+    autoLogging: { ignore: (req) => req.url === '/healthz' },
+    customLogLevel: (req, res, err) => {
+      if (err || res.statusCode >= 500) return 'error';
+      if (res.statusCode >= 400) return 'warn';
+      return 'info';
+    },
+    serializers: {
+      req: (req) => ({ method: req.method, url: req.url, id: req.id }),
+      res: (res) => ({ statusCode: res.statusCode }),
+    },
+  })
+);
+
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Health probe — no DB hit. Point UptimeRobot at this every 14min to keep the
+// Render free dyno warm and avoid the 30s cold-start.
 app.get('/healthz', (req, res) => res.status(200).send('ok'));
+
+// Readiness probe — checks the DB. Use this in container orchestrators that
+// distinguish "alive" from "ready to receive traffic".
+app.get('/readyz', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.status(200).json({ status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ status: 'db_unavailable', error: err.message });
+  }
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -58,71 +115,99 @@ app.use('/api/orders', require('./routes/orderRoutes')(io));
 app.use('/api/admin', adminRoutes);
 app.use('/api', require('./routes/reservationRoutes')(io));
 
-// Socket.io: clients identify themselves and join role-specific rooms so we
-// only push events to the parties that actually care about them.
+// Socket.io: authenticate on the handshake instead of after connection.
+// Unauthenticated sockets never get to consume server resources.
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+  if (!token) {
+    // Allow legacy clients to connect and identify later, for backwards compat.
+    return next();
+  }
+  try {
+    socket.user = jwt.verify(token, SECRET);
+    next();
+  } catch {
+    next(new Error('AUTH_INVALID'));
+  }
+});
+
+const joinRoomsForUser = (socket, user) => {
+  if (!user) return;
+  const { id, role } = user;
+  if (role === 'client') socket.join(`client_${id}`);
+  if (role === 'driver') {
+    socket.join('drivers');
+    socket.join(`driver_${id}`);
+  }
+  if (role === 'restaurant') socket.join(`restaurant_${id}`);
+  if (role === 'place') socket.join(`place_${id}`);
+  if (role === 'admin') socket.join('admins');
+};
+
 io.on('connection', (socket) => {
+  // Auto-join if the handshake carried a valid token.
+  if (socket.user) joinRoomsForUser(socket, socket.user);
+
+  // Legacy identify event — kept so older APK builds keep working.
   socket.on('identify', (payload) => {
     try {
-      const token = payload?.token;
-      if (!token) return;
-      const decoded = jwt.verify(token, SECRET);
-      const { id, role } = decoded;
-
-      if (role === 'client') socket.join(`client_${id}`);
-      if (role === 'driver') {
-        socket.join('drivers');
-        socket.join(`driver_${id}`);
-      }
-      if (role === 'restaurant') socket.join(`restaurant_${id}`);
-      if (role === 'place') socket.join(`place_${id}`);
-      if (role === 'admin') socket.join('admins');
+      const decoded = jwt.verify(payload?.token, SECRET);
+      joinRoomsForUser(socket, decoded);
     } catch {
-      // bad token — silently ignore, the next API call will reject them anyway.
+      // bad token — ignored; the next API call will reject them anyway.
     }
   });
 });
 
-// Error Handling Middleware
+// Centralized error handler. Logs structured details, returns a clean JSON
+// body that never leaks stack traces in production.
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error(`❌ Error: ${err.message}`);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : {}
+  req.log?.error({ err }, 'unhandled error');
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    message: err.expose ? err.message : 'Internal Server Error',
+    ...(process.env.DATABASE_URL ? {} : { stack: err.stack }),
   });
 });
 
-// Seed Data for Development
+// Last-resort guards — log and exit, let the orchestrator restart us.
+process.on('unhandledRejection', (reason) => {
+  logger.error({ reason }, 'unhandledRejection');
+});
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'uncaughtException');
+  // Give pino a tick to flush before dying.
+  setTimeout(() => process.exit(1), 100).unref();
+});
+
+// Seed Data — unchanged behavior, just routed through the new logger.
 const seedDatabase = async () => {
   try {
-    const userCount = await User.count();
-    const restaurantCount = await Restaurant.count();
+    const [userCount, restaurantCount] = await Promise.all([User.count(), Restaurant.count()]);
 
     if (userCount > 0 && restaurantCount > 0) {
-      console.log('✅ Database already seeded.');
+      logger.info('Database already seeded.');
       return;
     }
 
-    console.log('🌱 Seeding database...');
+    logger.info('Seeding database...');
 
-    // Create admin user if not exists
     const admin = await User.findOne({ where: { role: 'admin' } });
     if (!admin) {
       await User.create({ name: 'Admin Go', email: 'admin@go.com', password: 'password123', role: 'admin', phone: '0555555555' });
     }
 
-    // Create restaurant owners if not exists
     const owners = await User.findAll({ where: { role: 'restaurant' } });
     if (owners.length === 0) {
       const owner1 = await User.create({ name: 'Ahmed Pizzeria', email: 'pizza@go.com', password: 'password123', role: 'restaurant', phone: '0550000001' });
       const owner2 = await User.create({ name: 'Karim Burger', email: 'burger@go.com', password: 'password123', role: 'restaurant', phone: '0550000002' });
       const owner3 = await User.create({ name: 'Youcef Tacos', email: 'tacos@go.com', password: 'password123', role: 'restaurant', phone: '0550000003' });
 
-      // Create restaurants
       const r1 = await Restaurant.create({ name: 'Pizza Palace', description: 'Best pizza in town!', image: '🍕', address: 'Rue Didouche Mourad, Algiers', userId: owner1.id });
       const r2 = await Restaurant.create({ name: 'Burger Empire', description: 'Premium burgers & fries', image: '🍔', address: 'Boulevard Hassan, Oran', userId: owner2.id });
       const r3 = await Restaurant.create({ name: 'Tacos El Rey', description: 'Authentic tacos & wraps', image: '🌮', address: 'Centre Ville, Constantine', userId: owner3.id });
 
-      // Create products
       await Product.bulkCreate([
         { name: 'Margherita', price: 800, category: 'Pizza', restaurantId: r1.id, image: '🍕' },
         { name: 'Pepperoni', price: 1000, category: 'Pizza', restaurantId: r1.id, image: '🍕' },
@@ -136,29 +221,24 @@ const seedDatabase = async () => {
       ]);
     }
 
-    // Create test client if not exists
     const client = await User.findOne({ where: { role: 'client' } });
     if (!client) {
       await User.create({ name: 'Client Test', email: 'client@go.com', password: 'password123', role: 'client', phone: '0660000001' });
     }
 
-    // Create test driver if not exists
     const driver = await User.findOne({ where: { role: 'driver' } });
     if (!driver) {
       await User.create({ name: 'Driver Mohamed', email: 'driver@go.com', password: 'password123', role: 'driver', phone: '0770000001' });
     }
 
-    // Seed Places + Place Owner Accounts for Reservation Feature
     const placeCount = await Place.count();
     if (placeCount === 0) {
-      // Create place owner accounts
       const drKarim = await User.create({ name: 'Dr. Karim', email: 'drkarim@go.com', password: 'password123', role: 'place', phone: '0555100001' });
       const drSarah = await User.create({ name: 'Dr. Sarah', email: 'drsarah@go.com', password: 'password123', role: 'place', phone: '0555100002' });
       const clinique = await User.create({ name: 'Clinique El Shifa', email: 'clinique@go.com', password: 'password123', role: 'place', phone: '0555100003' });
       const apc = await User.create({ name: 'APC Mairie', email: 'apc@go.com', password: 'password123', role: 'place', phone: '0555100004' });
       const poste = await User.create({ name: 'Algérie Poste', email: 'poste@go.com', password: 'password123', role: 'place', phone: '0555100005' });
 
-      // Create places linked to owners
       await Place.bulkCreate([
         { name: 'Dr. Karim - Cardiologue', type: 'doctor', address: 'Centre Ville', description: 'Consultation cardiologie', icon: '🩺', userId: drKarim.id },
         { name: 'Dr. Sarah - Dentiste', type: 'doctor', address: 'El Kodia', description: 'Soins dentaires', icon: '🦷', userId: drSarah.id },
@@ -168,30 +248,41 @@ const seedDatabase = async () => {
       ]);
     }
 
-    console.log('✅ Seed data check/creation successfully!');
-  } catch (error) {
-    console.error('❌ Seeding error:', error);
+    logger.info('Seed data check/creation successful.');
+  } catch (err) {
+    logger.error({ err }, 'Seeding error');
   }
 };
 
-// Start Server
+// Boot
 const PORT = process.env.PORT || 3001;
-
-// `alter: true` adds new columns on boot but is expensive on every restart.
-// Production (DATABASE_URL set) skips it unless SYNC_ALTER=1 is explicitly opted in
-// — schema changes there should go through migrations, not boot-time diffs.
-// Local dev keeps alter for convenience.
 const optIn = process.env.SYNC_ALTER === '1';
 const optOut = process.env.SYNC_ALTER === '0';
 const isProd = !!process.env.DATABASE_URL;
 const shouldAlter = optIn || (!isProd && !optOut);
 const syncOptions = shouldAlter ? { alter: true } : {};
 
-sequelize.sync(syncOptions).then(async () => {
-  await seedDatabase();
-  server.listen(PORT, () => {
-    console.log(`🚀 GO-DELIVERY Backend running on http://localhost:${PORT}`);
+sequelize
+  .sync(syncOptions)
+  .then(async () => {
+    await seedDatabase();
+    server.listen(PORT, () => {
+      logger.info({ port: PORT, env: isProd ? 'production' : 'development' }, '🚀 GO-DELIVERY backend up');
+    });
+  })
+  .catch((err) => {
+    logger.fatal({ err }, 'Failed to sync database');
+    process.exit(1);
   });
-}).catch(err => {
-  console.error('❌ Failed to sync database:', err);
-});
+
+// Graceful shutdown so in-flight requests finish before we drop connections.
+const shutdown = (signal) => {
+  logger.info({ signal }, 'shutdown initiated');
+  server.close(() => {
+    sequelize.close().finally(() => process.exit(0));
+  });
+  // Hard exit after 10s if anything is hanging.
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

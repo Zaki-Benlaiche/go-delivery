@@ -73,3 +73,6 @@ typings/
 # IDEs
 .vscode/
 .idea/
+
+# Claude Code workspace
+.claude/

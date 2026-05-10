@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 const User = sequelize.define('User', {
   id: {
@@ -32,11 +32,22 @@ const User = sequelize.define('User', {
   },
 });
 
-// Hash password before saving. Cost 8 (instead of 10) on shared-CPU free tier:
-// each hash drops from ~120ms to ~30ms, so concurrent logins don't pile up
-// behind each other on the single Node event loop.
+// Native bcrypt offloads to libuv's thread pool, so concurrent hashes don't
+// freeze the event loop the way bcryptjs (pure JS) did. Cost 10 is the OWASP
+// floor and is fast enough on native (~60ms) — the tail latency stays bounded
+// even under registration spikes because hashing happens off the main thread.
+const HASH_COST = 10;
+
 User.beforeCreate(async (user) => {
-  user.password = await bcrypt.hash(user.password, 8);
+  user.password = await bcrypt.hash(user.password, HASH_COST);
+});
+
+// Re-hash on password change (admin-set or self-service) so update flows
+// don't accidentally store plaintext.
+User.beforeUpdate(async (user) => {
+  if (user.changed('password')) {
+    user.password = await bcrypt.hash(user.password, HASH_COST);
+  }
 });
 
 module.exports = User;

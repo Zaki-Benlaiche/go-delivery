@@ -2,40 +2,28 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { authMiddleware } = require('../middleware/auth');
+const { rateLimit, ipKey } = require('../middleware/rateLimiter');
+const { validate, schemas } = require('../middleware/validate');
 
-// In-memory rate limiter — no external dependency required
-const loginAttempts = new Map();
-const WINDOW_MS = 15 * 60 * 1000; // 15-minute sliding window
-const MAX_ATTEMPTS = 50;
+// Login: tight per-IP cap. 10 attempts in 15 min stops credential-stuffing
+// without inconveniencing a real user who mistyped a few times.
+const loginLimiter = rateLimit({
+  windowSec: 15 * 60,
+  max: 10,
+  keyFn: ipKey('login'),
+  message: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
+});
 
-const rateLimitLogin = (req, res, next) => {
-  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
-  const now = Date.now();
-  const attempts = (loginAttempts.get(ip) || []).filter(t => now - t < WINDOW_MS);
+// Register: stricter — bot signup floods are the main abuse vector.
+const registerLimiter = rateLimit({
+  windowSec: 60 * 60,
+  max: 5,
+  keyFn: ipKey('reg'),
+  message: 'Trop de comptes créés depuis cette adresse. Réessayez plus tard.',
+});
 
-  if (attempts.length >= MAX_ATTEMPTS) {
-    return res.status(429).json({
-      message: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
-    });
-  }
-
-  attempts.push(now);
-  loginAttempts.set(ip, attempts);
-  next();
-};
-
-// Purge stale entries every hour to prevent memory leak
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, attempts] of loginAttempts.entries()) {
-    const recent = attempts.filter(t => now - t < WINDOW_MS);
-    if (recent.length === 0) loginAttempts.delete(ip);
-    else loginAttempts.set(ip, recent);
-  }
-}, 60 * 60 * 1000);
-
-router.post('/register', authController.register);
-router.post('/login', rateLimitLogin, authController.login);
+router.post('/register', registerLimiter, validate(schemas.register), authController.register);
+router.post('/login', loginLimiter, validate(schemas.login), authController.login);
 router.get('/me', authMiddleware, authController.getMe);
 
 module.exports = router;

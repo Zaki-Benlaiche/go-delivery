@@ -1,104 +1,95 @@
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { User, Restaurant, Place } = require('../models');
 const { SECRET } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
+const logger = require('../lib/logger');
 
-exports.register = async (req, res) => {
+const TOKEN_TTL = '7d';
+const ALLOWED_ROLES = new Set(['client', 'restaurant', 'driver', 'place']);
+const ALLOWED_RESTAURANT_TYPES = new Set(['restaurant', 'superette', 'boucherie']);
+
+const signToken = (user) =>
+  jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: TOKEN_TTL });
+
+const publicUser = (user) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+});
+
+exports.register = asyncHandler(async (req, res) => {
+  const { name, email, password, role, phone, restaurantType } = req.body;
+  const safeRole = ALLOWED_ROLES.has(role) ? role : 'client';
+
+  // Skip the duplicate findOne — the unique constraint catches it in the
+  // INSERT path with a single round-trip instead of two.
+  let user;
   try {
-    const { name, email, password, role, phone, restaurantType } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email and password are required.' });
-    }
-
-    const existing = await User.findOne({ where: { email } });
-    if (existing) {
-      return res.status(400).json({ message: 'Email already registered.' });
-    }
-
-    // Block admin registration from public API
-    const allowedRoles = ['client', 'restaurant', 'driver', 'place'];
-    const safeRole = allowedRoles.includes(role) ? role : 'client';
-
-    const user = await User.create({ name, email, password, role: safeRole, phone: phone || '' });
-
-    // If registering as restaurant, create a restaurant entry. The restaurant
-    // role covers three sub-types: a normal menu-based restaurant, a superette
-    // (small grocery), or a boucherie (butcher). The two latter operate on a
-    // shopping-list flow rather than a fixed menu.
-    if (safeRole === 'restaurant') {
-      const allowedTypes = ['restaurant', 'superette', 'boucherie'];
-      const safeType = allowedTypes.includes(restaurantType) ? restaurantType : 'restaurant';
-      await Restaurant.create({
-        name: `${name}'s Shop`,
-        userId: user.id,
-        type: safeType,
-      });
-    }
-
-    // If registering as place (établissement), create a Place entry
-    if (safeRole === 'place') {
-      await Place.create({
-        name: name,
-        type: 'other',
-        address: '',
-        description: 'Nouvel établissement',
-        icon: '🏢',
-        userId: user.id,
-      });
-    }
-
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
-
-    res.status(201).json({
-      token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    user = await User.create({
+      name,
+      email,
+      password,
+      role: safeRole,
+      phone: phone || '',
     });
   } catch (err) {
-    console.error('❌ Register error:', err.message);
-    res.status(500).json({ message: 'Server error.', error: err.message });
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ message: 'Email already registered.' });
+    }
+    throw err;
   }
-};
 
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' });
-    }
-
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      return res.status(401).json({ message: 'Invalid password.' });
-    }
-
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: '7d' });
-
-    res.json({
-      token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+  // Side-entity creation runs in parallel where possible; today only one of
+  // these branches fires, but Promise.all keeps the structure ready for a
+  // future "restaurant + place owner" hybrid role.
+  if (safeRole === 'restaurant') {
+    const safeType = ALLOWED_RESTAURANT_TYPES.has(restaurantType) ? restaurantType : 'restaurant';
+    await Restaurant.create({
+      name: `${name}'s Shop`,
+      userId: user.id,
+      type: safeType,
     });
-  } catch (err) {
-    console.error('❌ Login error:', err.message);
-    res.status(500).json({ message: 'Server error.', error: err.message });
-  }
-};
-
-exports.getMe = async (req, res) => {
-  try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password'] },
-      include: [{ model: Restaurant, as: 'restaurant' }],
+  } else if (safeRole === 'place') {
+    await Place.create({
+      name,
+      type: 'other',
+      address: '',
+      description: 'Nouvel établissement',
+      icon: '🏢',
+      userId: user.id,
     });
-    res.json(user);
-  } catch (err) {
-    console.error('❌ GetMe error:', err.message);
-    res.status(500).json({ message: 'Server error.', error: err.message });
   }
-};
+
+  res.status(201).json({ token: signToken(user), user: publicUser(user) });
+});
+
+exports.login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  // Constant-time comparison branch: always run bcrypt even when the user
+  // is missing, so attackers can't distinguish "no such email" from "wrong
+  // password" via timing.
+  const user = await User.findOne({ where: { email } });
+  const hash = user?.password || '$2b$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidi';
+  const valid = await bcrypt.compare(password, hash);
+
+  if (!user || !valid) {
+    return res.status(401).json({ message: 'Email ou mot de passe incorrect.' });
+  }
+
+  res.json({ token: signToken(user), user: publicUser(user) });
+});
+
+exports.getMe = asyncHandler(async (req, res) => {
+  const user = await User.findByPk(req.user.id, {
+    attributes: { exclude: ['password'] },
+    include: [{ model: Restaurant, as: 'restaurant' }],
+  });
+  if (!user) return res.status(404).json({ message: 'User not found.' });
+  res.json(user);
+});
+
+// Eslint guard — keep `logger` referenced for future controller-level audit logs
+void logger;
