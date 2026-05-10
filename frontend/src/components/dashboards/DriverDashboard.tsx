@@ -5,7 +5,13 @@ import { useOrderStore } from '@/store/orderStore';
 import { Truck, MapPin, Phone, CheckCircle2, Navigation, Package, Store, User, Zap, Radio, TrendingUp, X, ClipboardList, ShoppingBasket } from 'lucide-react';
 
 export default function DriverDashboard() {
-  const { orders, availableOrders, fetchOrders, fetchAvailableOrders, updateStatus } = useOrderStore();
+  // Atomic selectors — pulling each field separately ensures a price modal
+  // toggle doesn't trigger a re-subscribe on the whole orders array.
+  const orders = useOrderStore((s) => s.orders);
+  const availableOrders = useOrderStore((s) => s.availableOrders);
+  const fetchOrders = useOrderStore((s) => s.fetchOrders);
+  const fetchAvailableOrders = useOrderStore((s) => s.fetchAvailableOrders);
+  const updateStatus = useOrderStore((s) => s.updateStatus);
 
   // Modal state for the price the livreur wants to charge for this run.
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);

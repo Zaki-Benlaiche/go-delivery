@@ -27,31 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
-      <body>
-        {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                  for (let registration of registrations) {
-                    registration.unregister();
-                    console.log('Service Worker unregistered:', registration.scope);
-                  }
-                });
-                caches.keys().then(function(cacheNames) {
-                  return Promise.all(
-                    cacheNames.map(function(cacheName) {
-                      console.log('Clearing cache:', cacheName);
-                      return caches.delete(cacheName);
-                    })
-                  );
-                });
-              }
-            `,
-          }}
-        />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

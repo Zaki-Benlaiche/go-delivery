@@ -99,7 +99,7 @@ export default function DownloadPage() {
           <ArrowLeft size={14} /> Retour
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src="/icon.png" alt="Réserve-vite" style={{ width: '28px', height: '28px', borderRadius: '7px' }} />
+          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={28} height={28} loading="eager" decoding="async" style={{ width: '28px', height: '28px', borderRadius: '7px' }} />
           <span style={{
             fontWeight: 900, fontSize: '0.92rem', letterSpacing: '-0.3px',
             background: 'linear-gradient(135deg, #ff4757, #ffc048)',
@@ -122,7 +122,7 @@ export default function DownloadPage() {
             boxShadow: '0 16px 48px rgba(255,71,87,0.25)',
             border: '2px solid rgba(255,71,87,0.2)',
           }}>
-            <img src="/icon.png" alt="Réserve-vite" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src="/icons/icon-512.webp" alt="Réserve-vite" loading="eager" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
 
           <h1 style={{ fontSize: 'clamp(1.6rem, 5vw, 2.4rem)', fontWeight: 900, marginBottom: '10px', letterSpacing: '-0.5px' }}>

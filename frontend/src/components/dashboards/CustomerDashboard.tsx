@@ -9,7 +9,11 @@ import type { Restaurant, Product, OrderStatus } from '@/types';
 import { ShoppingBag, Plus, Minus, MapPin, Package, Clock, Utensils, Info, Search, Heart, ChevronLeft, Navigation, Phone, ChefHat, User, X, ShoppingCart, ClipboardList, Users, XCircle, CheckCircle, Truck } from 'lucide-react';
 
 export default function CustomerDashboard() {
-  const { orders, fetchOrders, createOrder } = useOrderStore();
+  // Atomic selectors so a status change on one order doesn't re-render the
+  // whole tab tree (only the orders list itself rebuilds).
+  const orders = useOrderStore((s) => s.orders);
+  const fetchOrders = useOrderStore((s) => s.fetchOrders);
+  const createOrder = useOrderStore((s) => s.createOrder);
   const places = useReservationStore(s => s.places);
   const myReservations = useReservationStore(s => s.myReservations);
   const resLoaded = useReservationStore(s => s.loaded);

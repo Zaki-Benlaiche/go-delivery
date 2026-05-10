@@ -6,8 +6,17 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { LogOut, User, Truck, ChefHat, Shield, Building2, ShoppingBag, Bell, Trash2 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout } = useAuthStore();
-  const { notifications, unreadCount, isDropdownOpen, toggleDropdown, closeDropdown, clearAll } = useNotificationStore();
+  // Atomic selectors prevent re-render on unrelated store changes — destructuring
+  // the whole store re-renders the navbar every time *any* notification arrives,
+  // even if the badge count and dropdown state are unchanged.
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const isDropdownOpen = useNotificationStore((s) => s.isDropdownOpen);
+  const toggleDropdown = useNotificationStore((s) => s.toggleDropdown);
+  const closeDropdown = useNotificationStore((s) => s.closeDropdown);
+  const clearAll = useNotificationStore((s) => s.clearAll);
 
   if (!user) return null;
 
@@ -47,7 +56,7 @@ export default function Navbar() {
       }}>
         {/* Left: Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <img src="/icon.png" alt="Réserve-vite" style={{ width: '30px', height: '30px', borderRadius: '8px' }} />
+          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={30} height={30} loading="eager" decoding="async" style={{ width: '30px', height: '30px', borderRadius: '8px' }} />
           <span style={{
             fontSize: '0.95rem',
             fontWeight: 900,

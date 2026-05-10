@@ -34,7 +34,8 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
   const [placeType, setPlaceType] = useState('other');
   const [placeIcon, setPlaceIcon] = useState('🏢');
 
-  const { login, register } = useAuthStore();
+  const login = useAuthStore((s) => s.login);
+  const register = useAuthStore((s) => s.register);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +99,7 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <img src="/icon.png" alt="Réserve-vite" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
+          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={56} height={56} loading="eager" decoding="async" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
         </div>
         <h1 style={{ textAlign: 'center' }}>Réserve-vite</h1>
         <p className="subtitle" style={{ textAlign: 'center' }}>

@@ -5,7 +5,12 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { X, Bell } from 'lucide-react';
 
 export default function NotificationToast() {
-  const { showToast, currentToast, dismissToast } = useNotificationStore();
+  // Atomic selectors — destructuring the whole store re-renders this component
+  // on every notification list mutation, even though we only care about the
+  // single active toast.
+  const showToast = useNotificationStore((s) => s.showToast);
+  const currentToast = useNotificationStore((s) => s.currentToast);
+  const dismissToast = useNotificationStore((s) => s.dismissToast);
 
   if (!showToast || !currentToast) return null;
 

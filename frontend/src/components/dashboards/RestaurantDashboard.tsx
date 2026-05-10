@@ -9,9 +9,20 @@ import { ChefHat, Clock, CheckCircle, Flame, User, Phone, CheckCircle2, Truck, P
 import { useNotificationStore } from '@/store/notificationStore';
 
 export default function RestaurantDashboard() {
-  const { orders, fetchOrders, updateStatus } = useOrderStore();
-  const { products, restaurant, fetchMenu, updateRestaurant, toggleOpenStatus, addProduct, updateProduct, deleteProduct } = useMenuStore();
-  const { addNotification } = useNotificationStore();
+  // Atomic selectors — keeps a price edit in the menu tab from triggering a
+  // re-render of the orders tab, and vice versa.
+  const orders = useOrderStore((s) => s.orders);
+  const fetchOrders = useOrderStore((s) => s.fetchOrders);
+  const updateStatus = useOrderStore((s) => s.updateStatus);
+  const products = useMenuStore((s) => s.products);
+  const restaurant = useMenuStore((s) => s.restaurant);
+  const fetchMenu = useMenuStore((s) => s.fetchMenu);
+  const updateRestaurant = useMenuStore((s) => s.updateRestaurant);
+  const toggleOpenStatus = useMenuStore((s) => s.toggleOpenStatus);
+  const addProduct = useMenuStore((s) => s.addProduct);
+  const updateProduct = useMenuStore((s) => s.updateProduct);
+  const deleteProduct = useMenuStore((s) => s.deleteProduct);
+  const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'settings'>('orders');
   const [showAddModal, setShowAddModal] = useState(false);

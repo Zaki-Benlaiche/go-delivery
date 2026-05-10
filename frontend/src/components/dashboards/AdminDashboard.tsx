@@ -41,7 +41,7 @@ function useDebounce<T>(value: T, delay: number): T {
 const normalize = (s: string | null | undefined) => (s ?? '').toLowerCase();
 
 export default function AdminDashboard() {
-  const { addNotification } = useNotificationStore();
+  const addNotification = useNotificationStore((s) => s.addNotification);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [restaurants, setRestaurants] = useState<any[]>([]);

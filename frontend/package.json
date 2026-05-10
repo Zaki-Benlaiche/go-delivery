@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:apk": "next build && node scripts/prepare-apk-out.js && npx cap copy android",
     "start": "next start",
     "lint": "eslint"
   },
@@ -12,6 +13,7 @@
     "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
+    "@capacitor/preferences": "^8.0.1",
     "axios": "^1.13.6",
     "lucide-react": "^0.577.0",
     "next": "16.2.1",
