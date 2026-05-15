@@ -68,6 +68,44 @@ const schemas = {
     peopleBefore: z.coerce.number().int().min(0).optional(),
     estimatedWaitMinutes: z.coerce.number().int().min(0).max(1440).optional(),
   }),
+
+  placeUpdate: z.object({
+    name: z.string().trim().min(1).max(120).optional(),
+    address: z.string().trim().max(200).optional(),
+    description: z.string().trim().max(500).optional(),
+    type: z.enum(['doctor', 'clinic', 'government', 'other']).optional(),
+    icon: z.string().trim().max(8).optional(),
+  }),
+
+  restaurantUpdate: z.object({
+    name: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().max(500).optional(),
+    address: z.string().trim().max(200).optional(),
+    image: z.string().max(500).optional(),
+    isOpen: z.boolean().optional(),
+    type: z.enum(['restaurant', 'superette', 'boucherie']).optional(),
+  }),
+
+  product: z.object({
+    name: z.string().trim().min(1).max(120),
+    price: z.coerce.number().min(0).max(1000000),
+    category: z.string().trim().max(60).optional(),
+    image: z.string().max(500).optional(),
+    isAvailable: z.boolean().optional(),
+  }),
+
+  productUpdate: z.object({
+    name: z.string().trim().min(1).max(120).optional(),
+    price: z.coerce.number().min(0).max(1000000).optional(),
+    category: z.string().trim().max(60).optional(),
+    image: z.string().max(500).optional(),
+    isAvailable: z.boolean().optional(),
+  }),
+
+  // Admin: change a user's role (cannot demote self — controller enforces that).
+  adminRole: z.object({
+    role: z.enum(['client', 'restaurant', 'driver', 'admin', 'place']),
+  }),
 };
 
 module.exports = { validate, schemas };

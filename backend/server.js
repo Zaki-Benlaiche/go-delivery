@@ -40,8 +40,11 @@ const corsOptions = {
 const io = new Server(server, {
   cors: { origin: '*' },
   // Drop dead clients quickly — a stuck mobile connection shouldn't hold a slot.
+  // 10s timeout is aggressive but mobile networks reconnect cleanly; a
+  // half-dead socket was previously pinned for 20s and chewed a slot the
+  // whole time.
   pingInterval: 25000,
-  pingTimeout: 20000,
+  pingTimeout: 10000,
   // Compress only payloads above 1KB; below that, the CPU cost beats the savings.
   perMessageDeflate: { threshold: 1024 },
   // 1MB cap kills oversized frames that could DoS a single worker.
@@ -60,10 +63,13 @@ app.use(
 );
 
 // gzip after helmet so headers are set, but before routes so responses are compressed.
+// level: 4 is the sweet spot on Render free-tier shared CPU — within ~3% of the
+// size of level 6 but ~40% less CPU. The dyno tail-latency matters more than
+// a few extra KB on the wire.
 app.use(
   compression({
     threshold: 1024,
-    level: 6,
+    level: 4,
     filter: (req, res) => {
       if (req.headers['x-no-compression']) return false;
       return compression.filter(req, res);
@@ -92,6 +98,15 @@ app.use(
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Make io available to every controller via req.io. Lets routes drop the
+// `(req, res) => ctrl(req, res, io)` wrappers and the controllers be wrapped
+// in plain asyncHandler() — fewer closures, fewer try/catch, and unhandled
+// rejections all funnel through the central error handler.
+app.use((req, _res, next) => {
+  req.io = io;
+  next();
+});
 
 // Health probe — no DB hit. Point UptimeRobot at this every 14min to keep the
 // Render free dyno warm and avoid the 30s cold-start.
