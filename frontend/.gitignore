@@ -44,3 +44,6 @@ next-env.d.ts
 # temp debug files
 *.txt
 eslint_errors.json
+
+# stale APK at repo root — only public/reserve-vite.apk is the canonical download
+/go-delivery-app.apk

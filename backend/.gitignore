@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# env
+.env
+.env.*
+
+# local SQLite (dev only)
+*.sqlite
+*.sqlite3
+database.sqlite
+
+# logs
+*.log
+error_log.txt
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
