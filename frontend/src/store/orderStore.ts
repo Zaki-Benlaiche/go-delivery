@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Annulée',
 };
 
-export const useOrderStore = create<OrderState>((set, get) => ({
+export const useOrderStore = create<OrderState>((set) => ({
   orders: [],
   availableOrders: [],
   isLoading: false,
@@ -53,8 +53,16 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
   createOrder: async (restaurantId, items, deliveryAddress, shoppingList) => {
     try {
-      await api.post('/orders', { restaurantId, items, deliveryAddress, shoppingList });
-      await get().fetchOrders();
+      // Server replies with the full order and ALSO fires a `new_order` socket
+      // event to client_<id>. The socket handler upserts the order into the
+      // store, so we don't need to refetch — that round-trip just doubled the
+      // perceived "send" latency for no extra information.
+      const { data } = await api.post<Order>('/orders', { restaurantId, items, deliveryAddress, shoppingList });
+      if (data?.id) {
+        set((state) => ({
+          orders: [data, ...state.orders.filter((o) => o.id !== data.id)],
+        }));
+      }
     } catch (err) {
       console.error('createOrder error:', err);
     }

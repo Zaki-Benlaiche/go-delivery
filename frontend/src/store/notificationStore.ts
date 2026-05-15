@@ -28,6 +28,45 @@ interface NotificationState {
 
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
+// Reuse a single AudioContext across the session. Creating one per notification
+// leaked WebView memory and drained the battery — each context kept its own
+// audio thread alive. Browsers also cap the number of concurrent contexts.
+let sharedAudioCtx: AudioContext | null = null;
+const getAudioCtx = (): AudioContext | null => {
+  if (typeof window === 'undefined') return null;
+  if (sharedAudioCtx) return sharedAudioCtx;
+  try {
+    const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return null;
+    sharedAudioCtx = new Ctor();
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+};
+
+const playNotificationChime = () => {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    // Autoplay policies suspend the context until a user gesture — resume on
+    // demand. If we're still suspended after this, the chime silently no-ops.
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+    oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.4);
+  } catch {
+    /* ignore audio errors */
+  }
+};
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
@@ -55,20 +94,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       try { navigator.vibrate([100, 50, 100]); } catch { /* ignore */ }
     }
 
-    // Play notification sound
-    try {
-      const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-      oscillator.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-      oscillator.start(audioCtx.currentTime);
-      oscillator.stop(audioCtx.currentTime + 0.4);
-    } catch { /* ignore audio errors */ }
+    playNotificationChime();
 
     // Auto-dismiss toast after 5s
     if (toastTimeout) clearTimeout(toastTimeout);

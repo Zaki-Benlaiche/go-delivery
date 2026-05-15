@@ -16,8 +16,9 @@ export const viewport: Viewport = {
   themeColor: '#ff4757',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // No maximumScale / userScalable lock — blocking zoom hurts users with low
+  // vision and violates WCAG 1.4.4. The form-field zoom-on-focus jitter on iOS
+  // is handled by 16px+ font-size on inputs in globals.css instead.
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

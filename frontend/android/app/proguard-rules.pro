@@ -1,21 +1,49 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ============================================================================
+# ProGuard / R8 rules for the Capacitor WebView app.
+# Goal: aggressive shrink + obfuscation while preserving anything the runtime
+# (Capacitor bridge, JavaScript interface, plugin reflection) loads by name.
+# ============================================================================
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- Capacitor core + plugin reflection ---
+# Capacitor reflects on plugin classes by name from the JS bridge. R8 must
+# keep the public surface intact or the bridge throws ClassNotFoundException.
+-keep public class com.getcapacitor.** { *; }
+-keep public class com.capacitorjs.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin public class * { *; }
+-keepclassmembers class * extends com.getcapacitor.Plugin {
+    @com.getcapacitor.PluginMethod *;
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Plugin classes annotated with the legacy @NativePlugin marker (Cordova-era
+# bridge still used by some community plugins).
+-keep @com.getcapacitor.NativePlugin public class * { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --- WebView <-> JavaScript bridge ---
+# Anything exposed via @JavascriptInterface must keep its method signatures.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# --- The app's own entry points ---
+-keep public class com.godelivery.app.** { *; }
+
+# --- AndroidX / WebView baseline (kept by the platform anyway, listed for clarity) ---
+-keep class androidx.webkit.** { *; }
+-dontwarn androidx.webkit.**
+
+# --- Drop verbose log lines in release for a small dex saving + cleaner logcat ---
+-assumenosideeffects class android.util.Log {
+    public static *** v(...);
+    public static *** d(...);
+    public static *** i(...);
+}
+
+# --- Keep stack traces meaningful (but obfuscated). Without these, crash
+# reports come back as one-line "<unknown>" and are useless to debug. ---
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# --- Cordova-plugin compatibility shim (Capacitor still loads cordova-android
+# plugins through this layer when present). ---
+-keep class org.apache.cordova.** { *; }
+-dontwarn org.apache.cordova.**
