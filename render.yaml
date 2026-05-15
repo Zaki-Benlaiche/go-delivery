@@ -1,0 +1,50 @@
+# Render blueprint — declarative config for the go-delivery API.
+#
+# Pushing to main re-deploys automatically when this file is present in the
+# repo root and the Render dashboard has the blueprint connected. Env vars
+# without a value are kept as "sync: false" so Render keeps the existing
+# dashboard-managed value across deploys (e.g. DATABASE_URL points at Neon).
+#
+# To bootstrap a fresh environment from this file:
+#   1. Render dashboard → New → Blueprint → connect this repo
+#   2. Render reads render.yaml and creates the services
+#   3. Set the three "sync: false" secrets in the dashboard once
+#
+services:
+  - type: web
+    name: go-delivery-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    # Native bcrypt has to compile on the build machine. Render runs
+    # `npm install` which triggers the build, so no extra step needed.
+    buildCommand: npm install
+    startCommand: node server.js
+    # /healthz returns 200 without touching the DB. UptimeRobot or Render's
+    # own keep-alive pings this to keep the free dyno warm and skip cold-starts.
+    healthCheckPath: /healthz
+    # Auto-deploy on every push to main. Set to false if you'd rather gate
+    # production behind a manual click.
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        # Render reads this and provisions Node 20.x. Matches the
+        # `engines.node: >=20` in backend/package.json.
+        value: "20"
+      # Pool ceiling: free Neon plan caps connections; 5 leaves headroom
+      # for migrations and ad-hoc psql.
+      - key: DB_POOL_MAX
+        value: "5"
+      # Log verbosity. Drop to "warn" if logs get noisy.
+      - key: LOG_LEVEL
+        value: info
+      # --- Secrets set once in the Render dashboard, NOT in this file ---
+      - key: DATABASE_URL
+        sync: false   # Neon pooled connection string
+      - key: JWT_SECRET
+        sync: false   # min 32 chars; auth.js exits if missing in prod
+      - key: FRONTEND_URL
+        sync: false   # locks down CORS once the web URL is stable
