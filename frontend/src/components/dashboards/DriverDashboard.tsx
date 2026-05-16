@@ -18,12 +18,6 @@ export default function DriverDashboard() {
   const [pendingFee, setPendingFee] = useState<string>('');
   const [accepting, setAccepting] = useState(false);
 
-  // Modal state for confirming delivery of a shopping-list run. The driver
-  // enters the receipt total here before flipping the order to 'delivered'.
-  const [confirmingOrderId, setConfirmingOrderId] = useState<number | null>(null);
-  const [confirmTotal, setConfirmTotal] = useState<string>('');
-  const [confirming, setConfirming] = useState(false);
-
   useEffect(() => {
     fetchOrders();
     fetchAvailableOrders();
@@ -56,30 +50,11 @@ export default function DriverDashboard() {
   };
 
   const pendingOrder = pendingOrderId != null ? availableOrders.find(o => o.id === pendingOrderId) : null;
-  const confirmingOrder = confirmingOrderId != null ? orders.find(o => o.id === confirmingOrderId) : null;
 
-  // Confirm delivery — for shopping-list orders, prompt for receipt total first.
-  const handleConfirmDelivery = (order: { id: number; shoppingList?: string | null }) => {
-    if (order.shoppingList) {
-      setConfirmingOrderId(order.id);
-      setConfirmTotal('');
-    } else {
-      updateStatus(order.id, 'delivered');
-    }
-  };
-
-  const finalizeShoppingDelivery = async () => {
-    if (confirmingOrderId == null) return;
-    const t = Number(confirmTotal);
-    if (!Number.isFinite(t) || t < 0) return;
-    setConfirming(true);
-    try {
-      await updateStatus(confirmingOrderId, 'delivered', { total: t });
-      setConfirmingOrderId(null);
-      setConfirmTotal('');
-    } finally {
-      setConfirming(false);
-    }
+  // Single delivery path — shop owners now price shopping orders before
+  // they reach the driver pool, so the driver just confirms hand-off.
+  const handleConfirmDelivery = (order: { id: number }) => {
+    updateStatus(order.id, 'delivered');
   };
 
   return (
@@ -310,76 +285,6 @@ export default function DriverDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Shopping-list delivery confirm — driver enters the receipt total
-          before flipping the order to delivered. */}
-      {confirmingOrderId != null && confirmingOrder && (
-        <div
-          onClick={() => !confirming && setConfirmingOrderId(null)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="card fade-in"
-            style={{
-              width: '100%', maxWidth: '440px', padding: '24px',
-              border: '1px solid rgba(22,160,133,0.3)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem' }}>
-                <ShoppingBasket size={18} color="#16a085" /> Total du ticket
-              </h3>
-              <button
-                onClick={() => !confirming && setConfirmingOrderId(null)}
-                disabled={confirming}
-                style={{ background: 'var(--bg-elevated)', border: 'none', color: 'var(--text-muted)', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: confirming ? 'not-allowed' : 'pointer' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontSize: '0.85rem' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Liste achetée</div>
-              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.85rem', margin: 0, lineHeight: 1.5, maxHeight: '120px', overflowY: 'auto' }}>{confirmingOrder.shoppingList}</pre>
-            </div>
-
-            <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>
-              Total achat (DA)
-            </label>
-            <input
-              type="number"
-              autoFocus
-              min={0}
-              value={confirmTotal}
-              onChange={(e) => setConfirmTotal(e.target.value)}
-              placeholder="Ex: 1850"
-              style={{
-                width: '100%', padding: '14px 16px', borderRadius: '12px',
-                border: '1px solid var(--border)', background: 'var(--bg-elevated)', color: 'var(--text)',
-                fontSize: '1.1rem', fontWeight: 700, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter' && confirmTotal !== '') finalizeShoppingDelivery(); }}
-            />
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-              Le client paiera ce montant + votre prix de livraison ({confirmingOrder.deliveryFee || 0} DA).
-            </p>
-
-            <button
-              onClick={finalizeShoppingDelivery}
-              disabled={confirming || confirmTotal === ''}
-              className="btn btn-success btn-block"
-              style={{ marginTop: '14px', padding: '14px', fontSize: '1rem', fontWeight: 800, borderRadius: '12px' }}
-            >
-              {confirming ? 'Confirmation...' : 'Confirmer la livraison'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Delivery price prompt — livreur sets their own fee before accepting. */}
       {pendingOrderId != null && (

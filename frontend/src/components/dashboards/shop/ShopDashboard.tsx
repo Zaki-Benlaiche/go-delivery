@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ClipboardList, Truck, CheckCircle2, Clock, Phone, User,
-  MapPin, ListChecks, Settings, Power, Store,
+  MapPin, ListChecks, Settings, Power, Store, ChefHat, Flame, Package,
+  X,
 } from 'lucide-react';
 import { useOrderStore } from '@/store/orderStore';
 import { useMenuStore } from '@/store/menuStore';
@@ -18,16 +19,15 @@ interface ShopDashboardProps {
 }
 
 // Shared dashboard for the two shopping-list vendor roles (supérette and
-// boucherie). The flow is intentionally lean: shops don't accept/prepare
-// orders the way restaurants do — they get a read-only feed of incoming
-// shopping lists so they can anticipate demand, and a settings card to keep
-// their profile fresh. Drivers handle pickup + receipt total themselves.
-//
+// boucherie). Flow mirrors the restaurant one because shops now own the
+// order lifecycle:
+//   pending → owner accepts (preparing) → owner sets price (ready) → driver delivers
 // Same component for both roles so any future flow change lands in one place;
 // branding flips via the `kind` prop (icon, label, accent colour).
 export default function ShopDashboard({ kind }: ShopDashboardProps) {
   const orders = useOrderStore((s) => s.orders);
   const fetchOrders = useOrderStore((s) => s.fetchOrders);
+  const updateStatus = useOrderStore((s) => s.updateStatus);
   const restaurant = useMenuStore((s) => s.restaurant);
   const fetchMenu = useMenuStore((s) => s.fetchMenu);
   const updateRestaurant = useMenuStore((s) => s.updateRestaurant);
@@ -35,20 +35,56 @@ export default function ShopDashboard({ kind }: ShopDashboardProps) {
   const addNotification = useNotificationStore((s) => s.addNotification);
 
   const [activeTab, setActiveTab] = useState<'orders' | 'settings'>('orders');
+  // When the owner clicks "Prêt" we open a modal to capture the receipt
+  // total — the driver inherits it and the customer sees the final price.
+  const [pricingOrderId, setPricingOrderId] = useState<number | null>(null);
+  const [pricingTotal, setPricingTotal] = useState('');
+  const [pricingSubmitting, setPricingSubmitting] = useState(false);
 
   useEffect(() => {
     fetchOrders();
     fetchMenu();
   }, [fetchOrders, fetchMenu]);
 
-  // Buckets — same status taxonomy as Order, but the shop only cares about
-  // "active runs" vs "delivered history". Shopping-list orders skip the
-  // pending/accepted/preparing chain and land in `ready` immediately.
-  const incoming = useMemo(() => orders.filter((o) => o.status === 'ready'), [orders]);
+  // Buckets: pending and preparing are the shop's work surface; ready+delivery
+  // are post-handoff visibility; delivered is history.
+  const pendingOrders = useMemo(() => orders.filter((o) => o.status === 'pending'), [orders]);
+  const preparingOrders = useMemo(() => orders.filter((o) => o.status === 'accepted' || o.status === 'preparing'), [orders]);
+  const readyOrders = useMemo(() => orders.filter((o) => o.status === 'ready'), [orders]);
   const inDelivery = useMemo(() => orders.filter((o) => o.status === 'out_for_delivery'), [orders]);
   const completed = useMemo(() => orders.filter((o) => o.status === 'delivered'), [orders]);
 
   const brand = BRAND[kind];
+
+  const handleAccept = (orderId: number) => updateStatus(orderId, 'preparing');
+
+  const openPricingModal = (order: Order) => {
+    setPricingOrderId(order.id);
+    setPricingTotal(order.total > 0 ? String(order.total) : '');
+  };
+
+  const submitPricing = async () => {
+    if (pricingOrderId == null) return;
+    const t = Number(pricingTotal);
+    if (!Number.isFinite(t) || t < 0) return;
+    setPricingSubmitting(true);
+    try {
+      await updateStatus(pricingOrderId, 'ready', { total: t });
+      addNotification({
+        type: 'info',
+        title: 'Commande prête',
+        message: `Total: ${t} DA — les livreurs sont notifiés.`,
+        icon: '✅',
+        color: 'var(--success)',
+      });
+      setPricingOrderId(null);
+      setPricingTotal('');
+    } finally {
+      setPricingSubmitting(false);
+    }
+  };
+
+  const pricingOrder = pricingOrderId != null ? orders.find((o) => o.id === pricingOrderId) : null;
 
   return (
     <div className="shop-app">
@@ -77,7 +113,7 @@ export default function ShopDashboard({ kind }: ShopDashboardProps) {
               className={`tab-btn ${activeTab === 'orders' ? 'tab-btn-active' : 'tab-btn-inactive'}`}
               onClick={() => setActiveTab('orders')}
             >
-              <ClipboardList size={16} /> Commandes ({incoming.length + inDelivery.length})
+              <ClipboardList size={16} /> Commandes ({pendingOrders.length + preparingOrders.length})
             </button>
             <button
               className={`tab-btn ${activeTab === 'settings' ? 'tab-btn-active' : 'tab-btn-inactive'}`}
@@ -92,9 +128,13 @@ export default function ShopDashboard({ kind }: ShopDashboardProps) {
       {activeTab === 'orders' && (
         <OrdersFeed
           kind={kind}
-          incoming={incoming}
+          pending={pendingOrders}
+          preparing={preparingOrders}
+          ready={readyOrders}
           inDelivery={inDelivery}
           completed={completed}
+          onAccept={handleAccept}
+          onMarkReady={openPricingModal}
         />
       )}
 
@@ -116,6 +156,17 @@ export default function ShopDashboard({ kind }: ShopDashboardProps) {
           }}
         />
       )}
+
+      {pricingOrder && (
+        <PricingModal
+          order={pricingOrder}
+          value={pricingTotal}
+          onChange={setPricingTotal}
+          onSubmit={submitPricing}
+          onClose={() => setPricingOrderId(null)}
+          submitting={pricingSubmitting}
+        />
+      )}
     </div>
   );
 }
@@ -123,14 +174,14 @@ export default function ShopDashboard({ kind }: ShopDashboardProps) {
 const BRAND: Record<ShopKind, { label: string; subtitle: string; icon: React.ReactNode; color: string; bg: string }> = {
   superette: {
     label: 'Portail Supérette',
-    subtitle: 'Listes de courses en temps réel — le livreur achète puis livre.',
+    subtitle: 'Les clients envoient leurs listes — vous les préparez, le livreur les emporte.',
     icon: <Store size={22} />,
     color: 'var(--role-superette)',
     bg: 'var(--teal-glow)',
   },
   boucherie: {
     label: 'Portail Boucherie',
-    subtitle: 'Demandes de viande — le livreur passe, achète et livre.',
+    subtitle: 'Demandes de viande — vous préparez la commande puis le livreur passe la chercher.',
     icon: <Store size={22} />,
     color: 'var(--role-boucherie)',
     bg: 'rgba(190, 18, 60, 0.10)',
@@ -139,27 +190,36 @@ const BRAND: Record<ShopKind, { label: string; subtitle: string; icon: React.Rea
 
 function OrdersFeed({
   kind,
-  incoming,
+  pending,
+  preparing,
+  ready,
   inDelivery,
   completed,
+  onAccept,
+  onMarkReady,
 }: {
   kind: ShopKind;
-  incoming: Order[];
+  pending: Order[];
+  preparing: Order[];
+  ready: Order[];
   inDelivery: Order[];
   completed: Order[];
+  onAccept: (id: number) => void;
+  onMarkReady: (order: Order) => void;
 }) {
   const brand = BRAND[kind];
-  const total = incoming.length + inDelivery.length;
+  const totalActive = pending.length + preparing.length + ready.length + inDelivery.length;
 
   return (
     <div className="fade-in shop-orders">
       <div className="shop-stats">
-        <StatPill label="Listes en attente" value={incoming.length} color="var(--accent)" />
-        <StatPill label="En livraison" value={inDelivery.length} color="var(--info)" />
-        <StatPill label="Livrées (total)" value={completed.length} color="var(--success)" />
+        <StatPill label="Nouvelles" value={pending.length} color="var(--primary)" />
+        <StatPill label="En préparation" value={preparing.length} color="var(--info)" />
+        <StatPill label="Attente livreur" value={ready.length} color="var(--accent)" />
+        <StatPill label="En livraison" value={inDelivery.length} color="var(--role-driver)" />
       </div>
 
-      {total === 0 ? (
+      {totalActive === 0 ? (
         <div className="empty-state shop-empty">
           <div className="shop-empty-icon" style={{ background: brand.bg, color: brand.color }}>
             <ListChecks size={32} />
@@ -169,14 +229,52 @@ function OrdersFeed({
         </div>
       ) : (
         <>
-          {incoming.length > 0 && (
+          {pending.length > 0 && (
             <section className="shop-section">
-              <h2 className="shop-section-title shop-section-incoming">
-                <span className="pulse-dot" /> Nouvelles listes ({incoming.length})
+              <h2 className="shop-section-title shop-section-pending">
+                <Flame size={18} /> NOUVELLES LISTES ({pending.length})
               </h2>
               <div className="grid grid-2">
-                {incoming.map((order) => (
-                  <ShoppingListCard key={order.id} order={order} brandColor={brand.color} status="ready" />
+                {pending.map((order) => (
+                  <ShoppingListCard
+                    key={order.id}
+                    order={order}
+                    brandColor={brand.color}
+                    variant="pending"
+                    onAccept={() => onAccept(order.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {preparing.length > 0 && (
+            <section className="shop-section">
+              <h2 className="shop-section-title shop-section-preparing">
+                <ChefHat size={18} /> En préparation ({preparing.length})
+              </h2>
+              <div className="grid grid-2">
+                {preparing.map((order) => (
+                  <ShoppingListCard
+                    key={order.id}
+                    order={order}
+                    brandColor={brand.color}
+                    variant="preparing"
+                    onMarkReady={() => onMarkReady(order)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {ready.length > 0 && (
+            <section className="shop-section">
+              <h2 className="shop-section-title shop-section-ready">
+                <Package size={18} /> Prêtes — attente livreur ({ready.length})
+              </h2>
+              <div className="grid grid-2">
+                {ready.map((order) => (
+                  <ShoppingListCard key={order.id} order={order} brandColor={brand.color} variant="ready" />
                 ))}
               </div>
             </section>
@@ -189,7 +287,7 @@ function OrdersFeed({
               </h2>
               <div className="grid grid-2">
                 {inDelivery.map((order) => (
-                  <ShoppingListCard key={order.id} order={order} brandColor={brand.color} status="out_for_delivery" />
+                  <ShoppingListCard key={order.id} order={order} brandColor={brand.color} variant="delivery" />
                 ))}
               </div>
             </section>
@@ -220,18 +318,25 @@ function StatPill({ label, value, color }: { label: string; value: number; color
   );
 }
 
+type CardVariant = 'pending' | 'preparing' | 'ready' | 'delivery';
+
 function ShoppingListCard({
   order,
   brandColor,
-  status,
+  variant,
+  onAccept,
+  onMarkReady,
 }: {
   order: Order;
   brandColor: string;
-  status: 'ready' | 'out_for_delivery';
+  variant: CardVariant;
+  onAccept?: () => void;
+  onMarkReady?: () => void;
 }) {
   const minutesAgo = Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000));
+
   return (
-    <div className={`card shop-list-card ${status === 'ready' ? 'is-incoming' : 'is-delivering'}`}>
+    <div className={`card shop-list-card is-${variant}`}>
       <div className="shop-list-card-header">
         <div className="shop-list-card-meta">
           <h3>Commande #{order.id}</h3>
@@ -258,7 +363,7 @@ function ShoppingListCard({
 
       <div className="shop-list-card-list">
         <div className="shop-list-card-list-label">
-          <ListChecks size={12} /> Liste de courses
+          <ListChecks size={12} /> Liste demandée
         </div>
         <pre className="shop-list-card-list-pre">{order.shoppingList || '(vide)'}</pre>
       </div>
@@ -269,7 +374,13 @@ function ShoppingListCard({
         </div>
       )}
 
-      {status === 'out_for_delivery' && order.driver && (
+      {(variant === 'ready' || variant === 'delivery') && order.total > 0 && (
+        <div className="shop-list-card-total">
+          Total client&nbsp;: <strong>{order.total} DA</strong>
+        </div>
+      )}
+
+      {variant === 'delivery' && order.driver && (
         <div className="shop-list-card-driver">
           <Truck size={13} />
           <span>
@@ -282,6 +393,89 @@ function ShoppingListCard({
           )}
         </div>
       )}
+
+      {variant === 'pending' && onAccept && (
+        <button className="btn btn-primary btn-block shop-list-card-cta" onClick={onAccept}>
+          <CheckCircle2 size={16} /> Accepter & Préparer
+        </button>
+      )}
+
+      {variant === 'preparing' && onMarkReady && (
+        <button className="btn btn-info btn-block shop-list-card-cta" onClick={onMarkReady}>
+          <Package size={16} /> Prête (saisir le prix)
+        </button>
+      )}
+
+      {variant === 'ready' && (
+        <div className="shop-list-card-waiting">
+          <span className="pulse-dot" />
+          En attente d&apos;un livreur…
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PricingModal({
+  order,
+  value,
+  onChange,
+  onSubmit,
+  onClose,
+  submitting,
+}: {
+  order: Order;
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+  submitting: boolean;
+}) {
+  const numeric = Number(value);
+  const canSubmit = Number.isFinite(numeric) && numeric >= 0 && value !== '';
+
+  return (
+    <div className="rd-modal-overlay" onClick={onClose}>
+      <div className="card fade-in rd-modal" onClick={(e) => e.stopPropagation()}>
+        <h2 className="rd-modal-title">Prix final — Commande #{order.id}</h2>
+        <p className="shop-modal-help">
+          Indiquez le prix total que le client doit payer pour les articles (sans la livraison). Le livreur ajoutera ses frais.
+        </p>
+
+        <div className="shop-modal-recap">
+          <div className="shop-modal-recap-label">Liste préparée</div>
+          <pre className="shop-modal-recap-list">{order.shoppingList || '(vide)'}</pre>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (canSubmit && !submitting) onSubmit();
+          }}
+          className="rd-modal-form"
+        >
+          <div className="form-group rd-modal-field">
+            <label>Prix total (DA)</label>
+            <input
+              type="number"
+              min={0}
+              required
+              autoFocus
+              placeholder="ex: 1850"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+            />
+          </div>
+          <div className="rd-modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
+              <X size={14} /> Annuler
+            </button>
+            <button type="submit" className="btn btn-primary" disabled={!canSubmit || submitting}>
+              {submitting ? '...' : 'Confirmer & notifier les livreurs'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

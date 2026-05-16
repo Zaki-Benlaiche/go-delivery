@@ -99,7 +99,7 @@ export default function DownloadPage() {
           <ArrowLeft size={14} /> Retour
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={28} height={28} loading="eager" decoding="async" style={{ width: '28px', height: '28px', borderRadius: '7px' }} />
+          <img src="/icons/logo-192.webp" alt="Réserve-vite" width={32} height={32} loading="eager" decoding="async" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
           <span style={{
             fontWeight: 900, fontSize: '0.92rem', letterSpacing: '-0.3px',
             background: 'linear-gradient(135deg, #ff4757, #ffc048)',

@@ -39,7 +39,7 @@ export default function Navbar() {
     <>
       <nav className="app-navbar">
         <div className="app-navbar-brand">
-          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={30} height={30} loading="eager" decoding="async" />
+          <img src="/icons/logo-192.webp" alt="Réserve-vite" width={32} height={32} loading="eager" decoding="async" />
           <span className="app-navbar-name">RÉSERVE-VITE</span>
         </div>
 

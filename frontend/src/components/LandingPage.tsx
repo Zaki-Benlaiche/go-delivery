@@ -30,7 +30,7 @@ export default function LandingPage() {
       {/* NAV */}
       <nav className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="landing-nav-brand">
-          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={34} height={34} loading="eager" decoding="async" />
+          <img src="/icons/logo-192.webp" alt="Réserve-vite" width={36} height={36} loading="eager" decoding="async" />
           <span>
             <strong>Réserve</strong>-vite
           </span>

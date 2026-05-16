@@ -111,10 +111,10 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
 
         <div className="auth-logo">
           <img
-            src="/icons/icon-192.webp"
+            src="/icons/logo-256.webp"
             alt="Réserve-vite"
-            width={56}
-            height={56}
+            width={64}
+            height={64}
             loading="eager"
             decoding="async"
           />

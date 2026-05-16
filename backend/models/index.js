@@ -46,18 +46,39 @@ Reservation.belongsTo(Place, { foreignKey: 'placeId', as: 'place' });
 User.hasOne(Place, { foreignKey: 'userId', as: 'place' });
 Place.belongsTo(User, { foreignKey: 'userId', as: 'owner' });
 
-// One-shot migration: lift legacy users from role='restaurant'+type='superette'
-// (or boucherie) to the dedicated role. Old clients registered as restaurant
-// and the vendor kind lived only on Restaurant.type — the new auth flow treats
-// the kind as a first-class role so the dashboard router can pick the right
-// UI without joining Restaurant on every request.
+// Boot-time migrations for the vendor-role split. Two passes:
 //
-// Idempotent: re-running is a no-op once the rows are flipped. Runs at boot
-// after sequelize.sync(), gated by `dialect === 'postgres'` so SQLite dev
-// runs don't trip the qualified column references.
+//   1. Widen the Postgres ENUM. Sequelize.sync() does NOT add values to an
+//      existing ENUM — it only creates one the first time. So a fresh insert
+//      of role='superette' against a DB created before this feature fails
+//      with `invalid input value for enum`, the catch returns 500, and the
+//      user falls back to role='client'. ALTER TYPE ... ADD VALUE IF NOT
+//      EXISTS is the supported widening op and is idempotent.
+//
+//   2. Lift legacy users from role='restaurant'+Restaurant.type='superette'
+//      (or boucherie) to the dedicated role. The kind used to live only on
+//      Restaurant.type; now it's a first-class user role so the dashboard
+//      router can pick the right UI without joining Restaurant.
+//
+// Both passes are postgres-only — SQLite (dev) defines ENUMs as plain CHECK
+// constraints which Sequelize already keeps in sync via the model definition.
 async function migrateLegacyVendorRoles() {
   const dialect = sequelize.getDialect();
   if (dialect !== 'postgres') return;
+
+  // Widen ENUM. ALTER TYPE ... ADD VALUE cannot run inside a transaction
+  // block on older PG, so call it directly. Wrap each one because we don't
+  // want a single failure (e.g. value already exists on PG < 9.6 without
+  // IF NOT EXISTS support) to abort the second add.
+  for (const role of ['superette', 'boucherie']) {
+    try {
+      await sequelize.query(`ALTER TYPE "enum_Users_role" ADD VALUE IF NOT EXISTS '${role}'`);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[migrate] enum widen %s skipped:', role, err.message);
+    }
+  }
+
   try {
     const [supRes] = await sequelize.query(`
       UPDATE "Users"
@@ -71,14 +92,9 @@ async function migrateLegacyVendorRoles() {
       WHERE role = 'restaurant'
         AND id IN (SELECT "userId" FROM "Restaurants" WHERE type = 'boucherie')
     `);
-    // Sequelize returns metadata as second element; rowCount is on the metadata
-    // for postgres. Logged via console (logger isn't wired here to avoid a
-    // circular import — this only runs once at boot).
     // eslint-disable-next-line no-console
     console.log('[migrate] vendor-role lift: superette=%s boucherie=%s', supRes?.rowCount ?? 0, boucRes?.rowCount ?? 0);
   } catch (err) {
-    // Non-fatal: if migration fails, the app still boots and admin can flip
-    // roles manually via /admin/users/:id/role.
     // eslint-disable-next-line no-console
     console.warn('[migrate] vendor-role lift skipped:', err.message);
   }

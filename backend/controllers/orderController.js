@@ -73,7 +73,11 @@ exports.createOrder = asyncHandler(async (req, res) => {
     deliveryAddress,
     total,
     deliveryFee: 0,
-    status: isShoppingFlow ? 'ready' : 'pending',
+    // Every order — menu OR shopping-list — starts at 'pending' so the shop
+    // owner sees it and accepts/prepares before the courier pool is woken up.
+    // Used to skip straight to 'ready' for shopping orders, but that flow
+    // shipped the shop out of the loop entirely.
+    status: 'pending',
     shoppingList: isShoppingFlow ? shoppingList.trim() : null,
   });
 
@@ -83,20 +87,11 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
   const fullOrder = await Order.findByPk(order.id, { include: ORDER_INCLUDE });
 
-  // Customer always gets the confirmation event in their personal room.
+  // Customer gets the confirmation; vendor (restaurant OR shop) gets the
+  // incoming order in its dashboard. Drivers don't hear about it until the
+  // vendor flips status to 'ready'.
   req.io.to(`client_${req.user.id}`).emit('new_order', fullOrder);
-
-  if (isShoppingFlow) {
-    // Shopping-list flow: order goes straight to drivers AND the shop owner
-    // gets a read-only feed so they can see incoming demand (useful for
-    // restocking decisions). The shop doesn't need to "accept" anything —
-    // drivers handle pickup + receipt total themselves.
-    req.io.to('drivers').emit('order_ready_for_pickup', fullOrder);
-    req.io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
-  } else {
-    // Menu restaurant — owner accepts/prepares before drivers see it.
-    req.io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
-  }
+  req.io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
 
   res.status(201).json(fullOrder);
 });
@@ -164,10 +159,13 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     }
   }
 
-  // Driver fills the receipt total when delivering a shopping-list order
-  // (superette/boucherie). For menu orders the total is locked at creation
-  // and ignored here.
-  if (req.user.role === 'driver' && order.shoppingList && total !== undefined) {
+  // Shop owner sets the receipt total when flipping a shopping-list order
+  // to 'ready' — they just finished preparing it and know the price. The
+  // customer sees this total + the driver's fee on delivery. Allowed for
+  // any vendor role (restaurant/superette/boucherie) since menu totals
+  // were already computed at creation and don't pass through this branch.
+  const vendorRoles = ['restaurant', 'superette', 'boucherie', 'admin'];
+  if (vendorRoles.includes(req.user.role) && order.shoppingList && total !== undefined) {
     const t = Number(total);
     if (Number.isFinite(t) && t >= 0) {
       order.total = t;
