@@ -13,7 +13,6 @@ import RestaurantDetail from './customer/RestaurantDetail';
 import OrdersTab from './customer/OrdersTab';
 import ReservationTab from './customer/ReservationTab';
 import CartPanel from './customer/CartPanel';
-import ShoppingListPanel from './customer/ShoppingListPanel';
 import MobileCartBar from './customer/MobileCartBar';
 
 // Customer-facing top-level dashboard. This file is now an orchestrator: it
@@ -39,9 +38,6 @@ export default function CustomerDashboard() {
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
   const [appMode, setAppMode] = useState<'delivery' | 'reservation'>('delivery');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  // Free-text shopping list for superette/boucherie orders. Replaces the cart
-  // when the selected vendor is not a regular restaurant.
-  const [shoppingListText, setShoppingListText] = useState('');
 
   const loadRestaurants = async () => {
     try {
@@ -84,27 +80,18 @@ export default function CustomerDashboard() {
       return next;
     });
 
-  const isShoppingFlow = selectedRestaurant?.type === 'superette' || selectedRestaurant?.type === 'boucherie';
-
   const handleOrder = async () => {
     if (!selectedRestaurant) return;
+    if (Object.keys(cart).length === 0) return;
     const address = deliveryAddress.trim() || 'Adresse non précisée';
 
-    if (isShoppingFlow) {
-      if (!shoppingListText.trim()) return;
-      setIsOrdering(true);
-      await createOrder(selectedRestaurant.id, [], address, shoppingListText.trim());
-      setShoppingListText('');
-    } else {
-      if (Object.keys(cart).length === 0) return;
-      setIsOrdering(true);
-      const items = Object.entries(cart).map(([productId, quantity]) => ({
-        productId: Number(productId),
-        quantity,
-      }));
-      await createOrder(selectedRestaurant.id, items, address);
-      setCart({});
-    }
+    setIsOrdering(true);
+    const items = Object.entries(cart).map(([productId, quantity]) => ({
+      productId: Number(productId),
+      quantity,
+    }));
+    await createOrder(selectedRestaurant.id, items, address);
+    setCart({});
 
     setDeliveryAddress('');
     setSelectedRestaurant(null);
@@ -166,7 +153,6 @@ export default function CustomerDashboard() {
               restaurant={selectedRestaurant}
               cart={cart}
               cartTotal={cartTotal}
-              shoppingListText={shoppingListText}
               deliveryAddress={deliveryAddress}
               isOrdering={isOrdering}
               onBack={() => {
@@ -176,13 +162,12 @@ export default function CustomerDashboard() {
               onRefresh={() => openRestaurant(selectedRestaurant)}
               onAddToCart={addToCart}
               onRemoveFromCart={removeFromCart}
-              onShoppingListChange={setShoppingListText}
               onDeliveryAddressChange={setDeliveryAddress}
               onOrder={handleOrder}
             />
           )}
 
-          {activeTab === 'explore' && selectedRestaurant && !isShoppingFlow && totalItemsCount > 0 && (
+          {activeTab === 'explore' && selectedRestaurant && totalItemsCount > 0 && (
             <MobileCartBar
               variant="cart"
               itemsCount={totalItemsCount}
@@ -191,41 +176,20 @@ export default function CustomerDashboard() {
             />
           )}
 
-          {activeTab === 'explore' && selectedRestaurant && isShoppingFlow && shoppingListText.trim().length > 0 && (
-            <MobileCartBar
-              variant="shopping"
-              itemsCount={0}
-              cartTotal={0}
-              onOpen={() => setIsMobileCartOpen(true)}
-            />
-          )}
-
           {isMobileCartOpen && selectedRestaurant && (
             <div className="mobile-cart-overlay" onClick={() => setIsMobileCartOpen(false)}>
               <div className="mobile-cart-sheet" onClick={(e) => e.stopPropagation()}>
-                {isShoppingFlow ? (
-                  <ShoppingListPanel
-                    shoppingListText={shoppingListText}
-                    deliveryAddress={deliveryAddress}
-                    onDeliveryAddressChange={setDeliveryAddress}
-                    isOrdering={isOrdering}
-                    onOrder={handleOrder}
-                    isMobile
-                    onClose={() => setIsMobileCartOpen(false)}
-                  />
-                ) : (
-                  <CartPanel
-                    cart={cart}
-                    restaurant={selectedRestaurant}
-                    cartTotal={cartTotal}
-                    deliveryAddress={deliveryAddress}
-                    onDeliveryAddressChange={setDeliveryAddress}
-                    isOrdering={isOrdering}
-                    onOrder={handleOrder}
-                    isMobile
-                    onClose={() => setIsMobileCartOpen(false)}
-                  />
-                )}
+                <CartPanel
+                  cart={cart}
+                  restaurant={selectedRestaurant}
+                  cartTotal={cartTotal}
+                  deliveryAddress={deliveryAddress}
+                  onDeliveryAddressChange={setDeliveryAddress}
+                  isOrdering={isOrdering}
+                  onOrder={handleOrder}
+                  isMobile
+                  onClose={() => setIsMobileCartOpen(false)}
+                />
               </div>
             </div>
           )}

@@ -11,8 +11,8 @@ interface OrderState {
   isLoading: boolean;
   fetchOrders: () => Promise<void>;
   fetchAvailableOrders: () => Promise<void>;
-  createOrder: (restaurantId: number, items: { productId: number; quantity: number }[], deliveryAddress: string, shoppingList?: string) => Promise<void>;
-  updateStatus: (orderId: number, status: string, opts?: { deliveryFee?: number; total?: number }) => Promise<void>;
+  createOrder: (restaurantId: number, items: { productId: number; quantity: number }[], deliveryAddress: string) => Promise<void>;
+  updateStatus: (orderId: number, status: string, opts?: { deliveryFee?: number }) => Promise<void>;
   listenToSocket: () => () => void;
 }
 
@@ -51,13 +51,13 @@ export const useOrderStore = create<OrderState>((set) => ({
     }
   },
 
-  createOrder: async (restaurantId, items, deliveryAddress, shoppingList) => {
+  createOrder: async (restaurantId, items, deliveryAddress) => {
     try {
       // Server replies with the full order and ALSO fires a `new_order` socket
       // event to client_<id>. The socket handler upserts the order into the
       // store, so we don't need to refetch — that round-trip just doubled the
       // perceived "send" latency for no extra information.
-      const { data } = await api.post<Order>('/orders', { restaurantId, items, deliveryAddress, shoppingList });
+      const { data } = await api.post<Order>('/orders', { restaurantId, items, deliveryAddress });
       if (data?.id) {
         set((state) => ({
           orders: [data, ...state.orders.filter((o) => o.id !== data.id)],
@@ -70,9 +70,8 @@ export const useOrderStore = create<OrderState>((set) => ({
 
   updateStatus: async (orderId, status, opts) => {
     try {
-      const body: { status: string; deliveryFee?: number; total?: number } = { status };
+      const body: { status: string; deliveryFee?: number } = { status };
       if (opts?.deliveryFee !== undefined) body.deliveryFee = opts.deliveryFee;
-      if (opts?.total !== undefined) body.total = opts.total;
       await api.put(`/orders/${orderId}/status`, body);
       // Don't refetch — the server's socket event keeps state in sync, and a
       // second HTTP round-trip on every action just slows the UI down.

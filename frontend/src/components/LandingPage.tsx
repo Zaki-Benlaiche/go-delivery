@@ -2,15 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Truck, Star, Zap, ClipboardList, MapPin, Clock, Shield, Users, ArrowRight,
+  Truck, Star, Zap, ClipboardList, MapPin, Shield, Users, ArrowRight,
   Utensils, Phone, Activity, Sparkles, Building2, UserCircle2, Smartphone,
-  ShoppingCart, Beef, CheckCircle2,
+  CheckCircle2,
 } from 'lucide-react';
 import AuthPage from './AuthPage';
 
-// Marketing landing for non-authed visitors. Light Modern theme, six service
-// pillars (delivery + reservation + four vendor kinds), call-to-action to the
-// register flow, plus a download bridge to the Android APK.
+// Marketing landing for non-authed visitors. Four pillars: restaurants,
+// drivers, places (queue tickets) and clients. Register flow + APK download.
 export default function LandingPage() {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -60,7 +59,7 @@ export default function LandingPage() {
               <span className="landing-h1-accent">Tout réservé.</span>
             </h1>
             <p className="landing-lead">
-              Restaurants, supérette, boucherie, médecin, mairie — une seule app pour vos commandes et vos tickets de
+              Restaurants, médecins, mairie — une seule app pour vos commandes et vos tickets de
               file d&apos;attente, partout en Algérie.
             </p>
             <div className="landing-cta-row">
@@ -92,12 +91,12 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="landing-phone-card landing-phone-card-2">
-                  <div className="landing-phone-card-icon" style={{ background: 'var(--teal-glow)', color: 'var(--role-superette)' }}>
-                    <ShoppingCart size={18} />
+                  <div className="landing-phone-card-icon" style={{ background: 'var(--success-glow)', color: 'var(--role-driver)' }}>
+                    <Truck size={18} />
                   </div>
                   <div>
-                    <strong>Supérette du Coin</strong>
-                    <div>Liste libre · Ouvert</div>
+                    <strong>Mohamed (livreur)</strong>
+                    <div>Course acceptée · 5 min</div>
                   </div>
                 </div>
                 <div className="landing-phone-card landing-phone-card-3">
@@ -115,11 +114,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* SERVICES — 6 roles */}
+      {/* SERVICES — 4 roles */}
       <section className="landing-section">
         <div className="landing-section-head">
           <span className="landing-section-tag">SERVICES</span>
-          <h2>Une plateforme, six espaces.</h2>
+          <h2>Une plateforme, quatre espaces.</h2>
           <p>Chaque rôle a son tableau de bord, ses notifications, et son flux adapté.</p>
         </div>
 
@@ -200,15 +199,13 @@ export default function LandingPage() {
 
 const SERVICES = [
   { label: 'Restaurants', icon: <Utensils size={22} />, color: 'var(--role-restaurant)', bg: 'var(--primary-glow)', desc: 'Menus, panier, suivi en temps réel.' },
-  { label: 'Supérette', icon: <ShoppingCart size={22} />, color: 'var(--role-superette)', bg: 'var(--teal-glow)', desc: 'Liste libre — le livreur fait vos courses.' },
-  { label: 'Boucherie', icon: <Beef size={22} />, color: 'var(--role-boucherie)', bg: 'rgba(190, 18, 60, 0.10)', desc: 'Demandes de viande, prix au ticket de caisse.' },
   { label: 'Livreurs', icon: <Truck size={22} />, color: 'var(--role-driver)', bg: 'var(--success-glow)', desc: 'Acceptez des courses, fixez votre tarif.' },
   { label: 'Médecins & admins', icon: <Building2 size={22} />, color: 'var(--role-place)', bg: 'var(--info-glow)', desc: 'Vos patients prennent un ticket à distance.' },
   { label: 'Clients', icon: <UserCircle2 size={22} />, color: 'var(--role-client)', bg: 'var(--accent-glow)', desc: 'Tout en un, un seul compte.' },
 ];
 
 const STEPS = [
-  { icon: <Smartphone size={28} color="var(--primary)" />, title: 'Choisissez', desc: 'Restaurant, supérette, boucherie ou ticket — quelques tapotements.' },
+  { icon: <Smartphone size={28} color="var(--primary)" />, title: 'Choisissez', desc: 'Restaurant ou ticket de file — quelques tapotements.' },
   { icon: <Zap size={28} color="var(--accent)" />, title: 'Envoyez', desc: 'Confirmation instantanée et notification au commerce / livreur.' },
   { icon: <Truck size={28} color="var(--info)" />, title: 'Recevez', desc: 'Suivi en direct du livreur jusqu\'à votre porte.' },
 ];
@@ -219,7 +216,7 @@ const FEATURES = [
   { icon: <MapPin size={20} color="var(--info)" />, label: 'Pensé local', desc: 'DA, français, et adresses libres — pas de GPS imposé.' },
   { icon: <Phone size={20} color="var(--primary)" />, label: 'Paiement cash', desc: 'À la livraison, comme tout le monde fait déjà.' },
   { icon: <Activity size={20} color="var(--violet)" />, label: 'Notifications', desc: 'Vibration et son pour ne rien rater.' },
-  { icon: <Users size={20} color="var(--role-superette)" />, label: 'Multi-rôles', desc: 'Client, vendeur, livreur, médecin — un seul code.' },
-  { icon: <Clock size={20} color="var(--role-boucherie)" />, label: 'Files de réservation', desc: 'Prenez un ticket pour le médecin sans bouger.' },
+  { icon: <Users size={20} color="var(--role-driver)" />, label: 'Multi-rôles', desc: 'Client, restaurant, livreur, médecin — un seul code.' },
+  { icon: <ClipboardList size={20} color="var(--role-place)" />, label: 'Files de réservation', desc: 'Prenez un ticket pour le médecin sans bouger.' },
   { icon: <Star size={20} color="var(--accent)" />, label: 'Gratuit pour démarrer', desc: 'Compte vendeur gratuit, sans engagement.' },
 ];

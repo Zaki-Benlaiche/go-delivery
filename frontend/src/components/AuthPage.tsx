@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft, Building2, MapPin, FileText, Tag,
-  User as UserIcon, Truck, Utensils, ShoppingCart, Beef, Stethoscope,
+  User as UserIcon, Truck, Utensils, Stethoscope,
 } from 'lucide-react';
 
 interface AuthPageProps {
@@ -13,16 +13,13 @@ interface AuthPageProps {
   initialMode?: 'login' | 'register';
 }
 
-type RegisterRole = 'client' | 'restaurant' | 'superette' | 'boucherie' | 'driver' | 'place';
+type RegisterRole = 'client' | 'restaurant' | 'driver' | 'place';
 
 // Visual role picker entries. Each role gets its own colour token so the cards
-// communicate kind at a glance — the customer-facing flow has six distinct
-// account types now that superette/boucherie are first-class roles.
+// communicate kind at a glance.
 const ROLES: Array<{ value: RegisterRole; label: string; sub: string; icon: React.ReactNode; color: string }> = [
   { value: 'client', label: 'Client', sub: 'Commander à manger ou prendre un ticket', icon: <UserIcon size={18} />, color: 'var(--role-client)' },
   { value: 'restaurant', label: 'Restaurant', sub: 'Menu + commandes en temps réel', icon: <Utensils size={18} />, color: 'var(--role-restaurant)' },
-  { value: 'superette', label: 'Supérette', sub: 'Le livreur achète selon la liste', icon: <ShoppingCart size={18} />, color: 'var(--role-superette)' },
-  { value: 'boucherie', label: 'Boucherie', sub: 'Viande sur commande, liste libre', icon: <Beef size={18} />, color: 'var(--role-boucherie)' },
   { value: 'driver', label: 'Livreur', sub: 'Accepter des courses, fixer le prix', icon: <Truck size={18} />, color: 'var(--role-driver)' },
   { value: 'place', label: 'Établissement', sub: 'Médecin, mairie, poste — file d\'attente', icon: <Stethoscope size={18} />, color: 'var(--role-place)' },
 ];
@@ -58,8 +55,6 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
       if (isLogin) {
         await login(email, password);
       } else {
-        // Backend treats superette/boucherie as roles now; restaurantType arg
-        // is only used for plain 'restaurant' → legacy field, harmless.
         await register(name, email, password, role, phone);
 
         if (role === 'place' && placeName) {

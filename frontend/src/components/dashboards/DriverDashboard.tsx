@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useOrderStore } from '@/store/orderStore';
-import { Truck, MapPin, Phone, CheckCircle2, Navigation, Package, Store, User, Zap, Radio, TrendingUp, X, ClipboardList, ShoppingBasket } from 'lucide-react';
+import { Truck, MapPin, Phone, CheckCircle2, Navigation, Package, Store, User, Zap, Radio, TrendingUp, X } from 'lucide-react';
 
 export default function DriverDashboard() {
   // Atomic selectors — pulling each field separately ensures a price modal
@@ -121,24 +121,16 @@ export default function DriverDashboard() {
                   <div style={{ display: 'flex', gap: '14px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                       <div className="icon-box icon-box-md" style={{ background: 'rgba(255,192,72,0.1)' }}>
-                        {order.shoppingList ? <ShoppingBasket size={20} color="#ffc048" /> : <Store size={20} color="#ffc048" />}
+                        <Store size={20} color="#ffc048" />
                       </div>
                       <div style={{ width: '2px', flex: 1, background: 'linear-gradient(to bottom, #ffc048, #1e90ff)', opacity: 0.3 }}></div>
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ffc048', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                        {order.shoppingList ? (order.restaurant?.type === 'boucherie' ? 'Boucherie' : 'Supérette') : 'Récupération'}
+                        Récupération
                       </div>
                       <h4 style={{ margin: '4px 0', fontSize: 'clamp(0.95rem, 2.5vw, 1.15rem)', wordBreak: 'break-word' }}>{order.restaurant?.name}</h4>
                       <p style={{ margin: '4px 0', color: 'var(--text-muted)', fontSize: '0.85rem', wordBreak: 'break-word' }}>{order.restaurant?.address}</p>
-                      {order.shoppingList && (
-                        <div style={{ marginTop: '10px', background: 'var(--bg)', padding: '10px 12px', borderRadius: '8px', border: '1px dashed rgba(255,192,72,0.4)' }}>
-                          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ffc048', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <ClipboardList size={11} /> À acheter
-                          </div>
-                          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.85rem', margin: 0, lineHeight: 1.5, color: 'var(--text)' }}>{order.shoppingList}</pre>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -180,7 +172,7 @@ export default function DriverDashboard() {
                     onClick={() => handleConfirmDelivery(order)}
                   >
                     <CheckCircle2 size={20} />
-                    {order.shoppingList ? 'CONFIRMER (saisir le total)' : 'CONFIRMER LA LIVRAISON'}
+                    CONFIRMER LA LIVRAISON
                   </button>
                 </div>
               </div>
@@ -208,27 +200,16 @@ export default function DriverDashboard() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {availableOrders.map((order) => (
-                <div key={order.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'clamp(14px, 3vw, 24px)', borderLeft: `4px solid ${order.shoppingList ? '#16a085' : 'var(--accent)'}`, gap: '12px', flexWrap: 'wrap' }}>
+                <div key={order.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'clamp(14px, 3vw, 24px)', borderLeft: '4px solid var(--accent)', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 'clamp(12px, 3vw, 24px)', alignItems: 'center', minWidth: 0, flex: 1 }}>
                     <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                      {order.shoppingList ? (
-                        <ShoppingBasket size={28} color="#16a085" />
-                      ) : (
-                        <>
-                          <div style={{ fontSize: 'clamp(1.2rem, 3vw, 1.6rem)', fontWeight: 900, color: 'var(--accent)' }}>{order.total}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 800 }}>DA</div>
-                        </>
-                      )}
+                      <div style={{ fontSize: 'clamp(1.2rem, 3vw, 1.6rem)', fontWeight: 900, color: 'var(--accent)' }}>{order.total}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 800 }}>DA</div>
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                         <Store size={16} color="var(--primary)" />
                         <strong style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.restaurant?.name}</strong>
-                        {order.shoppingList && (
-                          <span style={{ background: '#16a085', color: 'white', fontSize: '0.65rem', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', flexShrink: 0 }}>
-                            {order.restaurant?.type === 'boucherie' ? 'Boucher' : 'Courses'}
-                          </span>
-                        )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <MapPin size={12} /> {order.restaurant?.address}
@@ -323,17 +304,10 @@ export default function DriverDashboard() {
                   <span style={{ color: 'var(--text-muted)' }}>Commerce</span>
                   <strong>{pendingOrder.restaurant?.name}</strong>
                 </div>
-                {pendingOrder.shoppingList ? (
-                  <div style={{ marginTop: '8px' }}>
-                    <div style={{ color: 'var(--text-muted)', marginBottom: '4px', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Liste à acheter</div>
-                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.85rem', margin: 0, lineHeight: 1.5, maxHeight: '120px', overflowY: 'auto' }}>{pendingOrder.shoppingList}</pre>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Total plats</span>
-                    <strong>{pendingOrder.total} DA</strong>
-                  </div>
-                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Total plats</span>
+                  <strong>{pendingOrder.total} DA</strong>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Vers</span>
                   <span style={{ textAlign: 'right', maxWidth: '60%' }}>{pendingOrder.deliveryAddress || '—'}</span>

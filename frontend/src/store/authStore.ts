@@ -9,7 +9,7 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role: string, phone: string, restaurantType?: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role: string, phone: string) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
 }
@@ -56,9 +56,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (name, email, password, role, phone, restaurantType) => {
+  register: async (name, email, password, role, phone) => {
     try {
-      const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password, role, phone, restaurantType });
+      const { data } = await api.post<AuthResponse>('/auth/register', { name, email, password, role, phone });
       await setAuth(data.token, JSON.stringify(data.user));
       set({ user: data.user, token: data.token });
     } catch (err: unknown) {

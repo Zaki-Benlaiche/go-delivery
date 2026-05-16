@@ -15,7 +15,7 @@ const ORDER_INCLUDE = [
   {
     model: Restaurant,
     as: 'restaurant',
-    attributes: ['id', 'name', 'image', 'address', 'isOpen', 'userId', 'type'],
+    attributes: ['id', 'name', 'image', 'address', 'isOpen', 'userId'],
   },
   { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
   { model: User, as: 'driver', attributes: ['id', 'name', 'phone'] },
@@ -31,40 +31,29 @@ const parsePagination = (req, defaultLimit = 50, maxLimit = 200) => {
 };
 
 exports.createOrder = asyncHandler(async (req, res) => {
-  const { restaurantId, items, deliveryAddress, shoppingList } = req.body;
+  const { restaurantId, items, deliveryAddress } = req.body;
 
   const restaurant = await Restaurant.findByPk(restaurantId);
   if (!restaurant) {
     return res.status(404).json({ message: 'Restaurant not found.' });
   }
 
-  const isShoppingFlow = restaurant.type === 'superette' || restaurant.type === 'boucherie';
-
-  // Branch by vendor type. Restaurants need at least one menu item; shopping
-  // flow shops need a non-empty list (the driver buys based on this text).
-  if (isShoppingFlow) {
-    if (!shoppingList || !shoppingList.trim()) {
-      return res.status(400).json({ message: 'La liste de courses est obligatoire.' });
-    }
-  } else if (!items || items.length === 0) {
+  if (!items || items.length === 0) {
     return res.status(400).json({ message: 'Order must have at least one item.' });
   }
 
+  // Bulk fetch products in a single query (no N+1) and total up.
+  const productIds = items.map(i => i.productId);
+  const products = await Product.findAll({ where: { id: productIds } });
+  const productMap = new Map(products.map(p => [p.id, p]));
+
   let total = 0;
   const orderItemsPayload = [];
-
-  if (!isShoppingFlow) {
-    // Menu order — bulk fetch products in a single query (no N+1) and total up.
-    const productIds = items.map(i => i.productId);
-    const products = await Product.findAll({ where: { id: productIds } });
-    const productMap = new Map(products.map(p => [p.id, p]));
-
-    for (const item of items) {
-      const product = productMap.get(item.productId);
-      if (!product) continue;
-      total += product.price * item.quantity;
-      orderItemsPayload.push({ productId: item.productId, quantity: item.quantity, price: product.price });
-    }
+  for (const item of items) {
+    const product = productMap.get(item.productId);
+    if (!product) continue;
+    total += product.price * item.quantity;
+    orderItemsPayload.push({ productId: item.productId, quantity: item.quantity, price: product.price });
   }
 
   const order = await Order.create({
@@ -73,12 +62,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
     deliveryAddress,
     total,
     deliveryFee: 0,
-    // Every order — menu OR shopping-list — starts at 'pending' so the shop
-    // owner sees it and accepts/prepares before the courier pool is woken up.
-    // Used to skip straight to 'ready' for shopping orders, but that flow
-    // shipped the shop out of the loop entirely.
     status: 'pending',
-    shoppingList: isShoppingFlow ? shoppingList.trim() : null,
   });
 
   if (orderItemsPayload.length > 0) {
@@ -87,9 +71,8 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
   const fullOrder = await Order.findByPk(order.id, { include: ORDER_INCLUDE });
 
-  // Customer gets the confirmation; vendor (restaurant OR shop) gets the
-  // incoming order in its dashboard. Drivers don't hear about it until the
-  // vendor flips status to 'ready'.
+  // Customer gets the confirmation; restaurant owner gets the incoming order.
+  // Drivers don't hear about it until the restaurant flips status to 'ready'.
   req.io.to(`client_${req.user.id}`).emit('new_order', fullOrder);
   req.io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
 
@@ -128,9 +111,9 @@ exports.getAvailableOrders = asyncHandler(async (req, res) => {
   // the restaurant fields the card actually displays.
   const orders = await Order.findAll({
     where: { status: 'ready', driverId: null },
-    attributes: ['id', 'status', 'total', 'deliveryAddress', 'shoppingList', 'createdAt', 'restaurantId', 'customerId'],
+    attributes: ['id', 'status', 'total', 'deliveryAddress', 'createdAt', 'restaurantId', 'customerId'],
     include: [
-      { model: Restaurant, as: 'restaurant', attributes: ['id', 'name', 'image', 'address', 'type'] },
+      { model: Restaurant, as: 'restaurant', attributes: ['id', 'name', 'image', 'address'] },
       { model: User, as: 'customer', attributes: ['id', 'name', 'phone'] },
     ],
     order: [['createdAt', 'ASC']],
@@ -142,7 +125,7 @@ exports.getAvailableOrders = asyncHandler(async (req, res) => {
 
 exports.updateOrderStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { status, deliveryFee, total } = req.body;
+  const { status, deliveryFee } = req.body;
 
   const order = await Order.findByPk(id);
   if (!order) return res.status(404).json({ message: 'Order not found.' });
@@ -156,19 +139,6 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     const fee = Number(deliveryFee);
     if (Number.isFinite(fee) && fee >= 0) {
       order.deliveryFee = fee;
-    }
-  }
-
-  // Shop owner sets the receipt total when flipping a shopping-list order
-  // to 'ready' — they just finished preparing it and know the price. The
-  // customer sees this total + the driver's fee on delivery. Allowed for
-  // any vendor role (restaurant/superette/boucherie) since menu totals
-  // were already computed at creation and don't pass through this branch.
-  const vendorRoles = ['restaurant', 'superette', 'boucherie', 'admin'];
-  if (vendorRoles.includes(req.user.role) && order.shoppingList && total !== undefined) {
-    const t = Number(total);
-    if (Number.isFinite(t) && t >= 0) {
-      order.total = t;
     }
   }
 

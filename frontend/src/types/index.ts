@@ -8,8 +8,6 @@ export interface User {
   phone?: string;
 }
 
-export type RestaurantType = 'restaurant' | 'superette' | 'boucherie';
-
 export interface Restaurant {
   id: number;
   name: string;
@@ -20,7 +18,6 @@ export interface Restaurant {
   isActive: boolean;
   isOpen: boolean;
   userId: number;
-  type: RestaurantType;
   products?: Product[];
 }
 
@@ -67,7 +64,6 @@ export interface Order {
   total: number;
   deliveryFee?: number;
   deliveryAddress: string;
-  shoppingList?: string | null;
   createdAt: string;
   updatedAt?: string;
   customerId: number;

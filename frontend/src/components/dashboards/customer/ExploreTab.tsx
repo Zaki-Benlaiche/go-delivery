@@ -14,7 +14,7 @@ interface ExploreTabProps {
 }
 
 // Home screen: hero banner with a search box, then a 3-column grid of
-// restaurant/superette/boucherie cards.
+// restaurant cards.
 export default function ExploreTab({
   restaurants,
   searchQuery,
@@ -94,11 +94,6 @@ function RestaurantCard({ restaurant, onOpen }: { restaurant: Restaurant; onOpen
         <div className="r-card-eta">
           <Clock size={11} color="var(--primary)" /> 30-40 min
         </div>
-        {restaurant.type && restaurant.type !== 'restaurant' && (
-          <div className={`r-card-type ${restaurant.type === 'boucherie' ? 'is-boucherie' : 'is-superette'}`}>
-            {restaurant.type === 'boucherie' ? '🥩 Boucherie' : '🛒 Supérette'}
-          </div>
-        )}
       </div>
       <div className="r-card-body">
         <h3>{restaurant.name}</h3>

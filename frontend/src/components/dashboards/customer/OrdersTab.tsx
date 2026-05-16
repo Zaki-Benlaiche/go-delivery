@@ -112,21 +112,17 @@ function ActiveOrderCard({ order }: { order: Order }) {
         </div>
 
         <div className="order-detail-box">
-          <h4>{order.shoppingList ? 'Liste de courses' : 'Détails'}</h4>
-          {order.shoppingList ? (
-            <pre className="order-shopping-list">{order.shoppingList}</pre>
-          ) : (
-            <div className="order-items-list">
-              {order.items?.map((item) => (
-                <div key={item.id} className="order-item-row">
-                  <span>
-                    <strong className="order-item-qty">{item.quantity}x</strong> {item.product?.name}
-                  </span>
-                  <span>{item.price * item.quantity} DA</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <h4>Détails</h4>
+          <div className="order-items-list">
+            {order.items?.map((item) => (
+              <div key={item.id} className="order-item-row">
+                <span>
+                  <strong className="order-item-qty">{item.quantity}x</strong> {item.product?.name}
+                </span>
+                <span>{item.price * item.quantity} DA</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {isDelivering && order.driver && (

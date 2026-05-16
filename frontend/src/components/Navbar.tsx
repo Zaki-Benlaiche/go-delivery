@@ -5,7 +5,6 @@ import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import {
   LogOut, User, Truck, ChefHat, Shield, Building2, ShoppingBag, Bell, Trash2,
-  Store, Beef,
 } from 'lucide-react';
 
 // Top-of-app shell. Sticky on scroll, role-coloured user pill, notification
@@ -126,8 +125,6 @@ export default function Navbar() {
 const ROLE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   client: { label: 'Client', icon: <ShoppingBag size={11} />, color: 'var(--role-client)' },
   restaurant: { label: 'Restaurant', icon: <ChefHat size={11} />, color: 'var(--role-restaurant)' },
-  superette: { label: 'Supérette', icon: <Store size={11} />, color: 'var(--role-superette)' },
-  boucherie: { label: 'Boucherie', icon: <Beef size={11} />, color: 'var(--role-boucherie)' },
   driver: { label: 'Livreur', icon: <Truck size={11} />, color: 'var(--role-driver)' },
   admin: { label: 'Admin', icon: <Shield size={11} />, color: 'var(--role-admin)' },
   place: { label: 'Établissement', icon: <Building2 size={11} />, color: 'var(--role-place)' },
