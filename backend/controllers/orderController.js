@@ -87,10 +87,12 @@ exports.createOrder = asyncHandler(async (req, res) => {
   req.io.to(`client_${req.user.id}`).emit('new_order', fullOrder);
 
   if (isShoppingFlow) {
-    // Shopping-list shops don't process orders — push directly to drivers
-    // so anyone available can claim the run, buy on the customer's behalf,
-    // and fill in the receipt total at delivery time.
+    // Shopping-list flow: order goes straight to drivers AND the shop owner
+    // gets a read-only feed so they can see incoming demand (useful for
+    // restocking decisions). The shop doesn't need to "accept" anything —
+    // drivers handle pickup + receipt total themselves.
     req.io.to('drivers').emit('order_ready_for_pickup', fullOrder);
+    req.io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);
   } else {
     // Menu restaurant — owner accepts/prepares before drivers see it.
     req.io.to(`restaurant_${restaurant.userId}`).emit('new_order', fullOrder);

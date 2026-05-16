@@ -19,7 +19,7 @@ const schemas = {
     name: z.string().trim().min(2).max(80),
     email: z.string().trim().toLowerCase().email().max(120),
     password: z.string().min(6).max(128),
-    role: z.enum(['client', 'restaurant', 'driver', 'place']).optional(),
+    role: z.enum(['client', 'restaurant', 'driver', 'place', 'superette', 'boucherie']).optional(),
     phone: z.string().trim().max(20).optional(),
     restaurantType: z.enum(['restaurant', 'superette', 'boucherie']).optional(),
     // Honeypot — bots auto-fill this; humans never see it.
@@ -104,7 +104,7 @@ const schemas = {
 
   // Admin: change a user's role (cannot demote self — controller enforces that).
   adminRole: z.object({
-    role: z.enum(['client', 'restaurant', 'driver', 'admin', 'place']),
+    role: z.enum(['client', 'restaurant', 'driver', 'admin', 'place', 'superette', 'boucherie']),
   }),
 };
 

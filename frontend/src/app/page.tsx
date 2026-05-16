@@ -29,6 +29,14 @@ const RestaurantDashboard = dynamic(() => import('@/components/dashboards/Restau
   loading: () => dashboardLoader,
   ssr: false,
 });
+const SuperetteDashboard = dynamic(() => import('@/components/dashboards/SuperetteDashboard'), {
+  loading: () => dashboardLoader,
+  ssr: false,
+});
+const BoucherieDashboard = dynamic(() => import('@/components/dashboards/BoucherieDashboard'), {
+  loading: () => dashboardLoader,
+  ssr: false,
+});
 const DriverDashboard = dynamic(() => import('@/components/dashboards/DriverDashboard'), {
   loading: () => dashboardLoader,
   ssr: false,
@@ -45,6 +53,8 @@ const PlaceDashboard = dynamic(() => import('@/components/dashboards/PlaceDashbo
 const DASHBOARDS: Record<string, React.ComponentType> = {
   client: CustomerDashboard,
   restaurant: RestaurantDashboard,
+  superette: SuperetteDashboard,
+  boucherie: BoucherieDashboard,
   driver: DriverDashboard,
   admin: AdminDashboard,
   place: PlaceDashboard,

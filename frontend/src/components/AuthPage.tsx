@@ -3,31 +3,44 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Building2, MapPin, FileText, Tag } from 'lucide-react';
+import {
+  ChevronLeft, Building2, MapPin, FileText, Tag,
+  User as UserIcon, Truck, Utensils, ShoppingCart, Beef, Stethoscope,
+} from 'lucide-react';
 
 interface AuthPageProps {
   onBack?: () => void;
   initialMode?: 'login' | 'register';
 }
 
+type RegisterRole = 'client' | 'restaurant' | 'superette' | 'boucherie' | 'driver' | 'place';
+
+// Visual role picker entries. Each role gets its own colour token so the cards
+// communicate kind at a glance — the customer-facing flow has six distinct
+// account types now that superette/boucherie are first-class roles.
+const ROLES: Array<{ value: RegisterRole; label: string; sub: string; icon: React.ReactNode; color: string }> = [
+  { value: 'client', label: 'Client', sub: 'Commander à manger ou prendre un ticket', icon: <UserIcon size={18} />, color: 'var(--role-client)' },
+  { value: 'restaurant', label: 'Restaurant', sub: 'Menu + commandes en temps réel', icon: <Utensils size={18} />, color: 'var(--role-restaurant)' },
+  { value: 'superette', label: 'Supérette', sub: 'Le livreur achète selon la liste', icon: <ShoppingCart size={18} />, color: 'var(--role-superette)' },
+  { value: 'boucherie', label: 'Boucherie', sub: 'Viande sur commande, liste libre', icon: <Beef size={18} />, color: 'var(--role-boucherie)' },
+  { value: 'driver', label: 'Livreur', sub: 'Accepter des courses, fixer le prix', icon: <Truck size={18} />, color: 'var(--role-driver)' },
+  { value: 'place', label: 'Établissement', sub: 'Médecin, mairie, poste — file d\'attente', icon: <Stethoscope size={18} />, color: 'var(--role-place)' },
+];
+
 export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProps) {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
-  // When AuthPage is reached via the /auth route (no onBack prop), still let the user go back.
+  // Reached via /auth route (no onBack prop) → still let the user go home.
   const handleBack = onBack ?? (() => router.push('/'));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('client');
+  const [role, setRole] = useState<RegisterRole>('client');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  // Restaurant sub-type — chooses between menu-based (restaurant) and
-  // shopping-list flow (superette/boucherie). Backend defaults to 'restaurant'
-  // when missing, so this only matters during registration.
-  const [restaurantType, setRestaurantType] = useState<'restaurant' | 'superette' | 'boucherie'>('restaurant');
-
-  // Établissement-specific fields
+  // Établissement-specific fields (only collected when role === 'place')
   const [placeName, setPlaceName] = useState('');
   const [placeAddress, setPlaceAddress] = useState('');
   const [placeDescription, setPlaceDescription] = useState('');
@@ -40,13 +53,15 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
     try {
       if (isLogin) {
         await login(email, password);
       } else {
-        await register(name, email, password, role, phone, role === 'restaurant' ? restaurantType : undefined);
+        // Backend treats superette/boucherie as roles now; restaurantType arg
+        // is only used for plain 'restaurant' → legacy field, harmless.
+        await register(name, email, password, role, phone);
 
-        // If place, update place info after registration
         if (role === 'place' && placeName) {
           try {
             const api = (await import('@/lib/api')).default;
@@ -69,6 +84,8 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong';
       setError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -83,88 +100,88 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
     { value: '🎓', label: '🎓 Université' },
   ];
 
+  const isExpandedCard = role === 'place' && !isLogin;
+
   return (
     <div className="auth-page">
-      <div className="auth-card fade-in" style={{ maxWidth: role === 'place' && !isLogin ? '520px' : '440px', transition: 'max-width 0.3s' }}>
-        <button
-          onClick={handleBack}
-          style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-            fontSize: '0.85rem', marginBottom: '16px', padding: 0,
-            fontFamily: 'inherit',
-          }}
-        >
+      <div className={`auth-card fade-in ${isExpandedCard ? 'auth-card-wide' : ''}`}>
+        <button onClick={handleBack} className="auth-back-btn">
           <ChevronLeft size={18} /> Retour
         </button>
 
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={56} height={56} loading="eager" decoding="async" style={{ width: '56px', height: '56px', borderRadius: '12px' }} />
+        <div className="auth-logo">
+          <img
+            src="/icons/icon-192.webp"
+            alt="Réserve-vite"
+            width={56}
+            height={56}
+            loading="eager"
+            decoding="async"
+          />
         </div>
-        <h1 style={{ textAlign: 'center' }}>Réserve-vite</h1>
-        <p className="subtitle" style={{ textAlign: 'center' }}>
-          {isLogin ? 'Connectez-vous à votre compte' : 'Créez un nouveau compte'}
-        </p>
+        <h1>Réserve-vite</h1>
+        <p className="subtitle">{isLogin ? 'Connectez-vous à votre compte' : 'Créez un nouveau compte'}</p>
 
-        {error && (
-          <div style={{ background: '#ff475720', color: '#ff4757', padding: '12px', borderRadius: '10px', marginBottom: '20px', fontSize: '0.85rem' }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="auth-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           {!isLogin && (
             <>
               <div className="form-group">
                 <label>Nom complet</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ahmed Ben Ali" required />
-              </div>
-              <div className="form-group">
-                <label>Rôle</label>
-                <select value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="client">👤 Client</option>
-                  <option value="restaurant">🍽️ Commerce (Restaurant / Supérette / Boucherie)</option>
-                  <option value="driver">🚚 Livreur</option>
-                  <option value="place">🏢 Établissement (Médecin, Poste...)</option>
-                </select>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ahmed Ben Ali"
+                  required
+                />
               </div>
 
-              {role === 'restaurant' && (
-                <div className="form-group">
-                  <label>Type de commerce</label>
-                  <select value={restaurantType} onChange={(e) => setRestaurantType(e.target.value as 'restaurant' | 'superette' | 'boucherie')}>
-                    <option value="restaurant">🍽️ Restaurant (menu)</option>
-                    <option value="superette">🛒 Supérette (liste de courses)</option>
-                    <option value="boucherie">🥩 Boucherie (liste de courses)</option>
-                  </select>
-                  {restaurantType !== 'restaurant' && (
-                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                      Le client envoie une liste, le livreur achète et livre.
-                    </p>
-                  )}
+              <div className="form-group">
+                <label>Choisissez votre rôle</label>
+                <div className="role-grid">
+                  {ROLES.map((r) => {
+                    const active = role === r.value;
+                    return (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setRole(r.value)}
+                        className={`role-card ${active ? 'is-active' : ''}`}
+                        style={active ? { '--role-color': r.color } as React.CSSProperties : undefined}
+                      >
+                        <span className="role-card-icon" style={{ color: r.color }}>
+                          {r.icon}
+                        </span>
+                        <span className="role-card-text">
+                          <span className="role-card-label">{r.label}</span>
+                          <span className="role-card-sub">{r.sub}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               <div className="form-group">
                 <label>Téléphone</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="06 00 00 00 00" />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="06 00 00 00 00"
+                />
               </div>
 
-              {/* ===== PLACE-SPECIFIC FIELDS ===== */}
               {role === 'place' && (
-                <div style={{
-                  background: 'rgba(30,144,255,0.05)',
-                  border: '1px solid rgba(30,144,255,0.15)',
-                  borderRadius: '14px',
-                  padding: '16px',
-                  marginBottom: '16px',
-                }}>
-                  <h4 style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '14px', color: '#1e90ff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="place-fields">
+                  <h4 className="place-fields-title">
                     <Building2 size={16} /> Informations de l&apos;établissement
                   </h4>
 
-                  <div className="form-group" style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div className="form-group">
+                    <label>
                       <Tag size={12} /> Nom de l&apos;établissement
                     </label>
                     <input
@@ -176,8 +193,8 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <div className="place-fields-row">
+                    <div className="form-group">
                       <label>Type</label>
                       <select value={placeType} onChange={(e) => setPlaceType(e.target.value)}>
                         <option value="doctor">🩺 Médecin</option>
@@ -186,18 +203,20 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
                         <option value="other">📮 Autre</option>
                       </select>
                     </div>
-                    <div className="form-group" style={{ marginBottom: '12px' }}>
+                    <div className="form-group">
                       <label>Icône</label>
                       <select value={placeIcon} onChange={(e) => setPlaceIcon(e.target.value)}>
-                        {iconOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        {iconOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div className="form-group">
+                    <label>
                       <MapPin size={12} /> Adresse
                     </label>
                     <input
@@ -209,7 +228,7 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <label>
                       <FileText size={12} /> Description
                     </label>
                     <input
@@ -226,24 +245,42 @@ export default function AuthPage({ onBack, initialMode = 'login' }: AuthPageProp
 
           <div className="form-group">
             <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" required />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@example.com"
+              required
+            />
           </div>
 
           <div className="form-group">
             <label>Mot de passe</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '8px' }}>
-            {isLogin ? 'Se Connecter' : 'Créer un Compte'}
+          <button type="submit" className="btn btn-primary btn-block auth-submit-btn" disabled={submitting}>
+            {submitting ? '...' : isLogin ? 'Se Connecter' : 'Créer un Compte'}
           </button>
         </form>
 
         <div className="auth-toggle">
           {isLogin ? (
-            <span>Pas de compte ? <a onClick={() => setIsLogin(false)}>Inscrivez-vous</a></span>
+            <span>
+              Pas de compte ?{' '}
+              <a onClick={() => setIsLogin(false)}>Inscrivez-vous</a>
+            </span>
           ) : (
-            <span>Déjà un compte ? <a onClick={() => setIsLogin(true)}>Connectez-vous</a></span>
+            <span>
+              Déjà un compte ?{' '}
+              <a onClick={() => setIsLogin(true)}>Connectez-vous</a>
+            </span>
           )}
         </div>
       </div>

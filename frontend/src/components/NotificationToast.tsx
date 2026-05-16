@@ -32,16 +32,16 @@ export default function NotificationToast() {
     >
       <div
         style={{
-          background: 'rgba(22, 24, 32, 0.97)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          background: 'rgba(255, 255, 255, 0.96)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           borderRadius: '16px',
           padding: '14px 16px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          border: `1px solid ${currentToast.color}33`,
-          boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.05)`,
+          border: `1px solid ${currentToast.color}40`,
+          boxShadow: `0 16px 40px rgba(15, 23, 42, 0.18), 0 0 0 1px ${currentToast.color}20`,
         }}
       >
         {/* Icon */}
@@ -82,7 +82,7 @@ export default function NotificationToast() {
           <div
             style={{
               fontSize: '0.88rem',
-              color: '#e8e8ea',
+              color: 'var(--text)',
               fontWeight: 500,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -100,9 +100,9 @@ export default function NotificationToast() {
             dismissToast();
           }}
           style={{
-            background: 'rgba(255,255,255,0.06)',
+            background: 'var(--bg-elevated)',
             border: 'none',
-            color: 'rgba(255,255,255,0.4)',
+            color: 'var(--text-muted)',
             width: '28px',
             height: '28px',
             borderRadius: '8px',

@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const logger = require('./lib/logger');
-const { sequelize, User, Restaurant, Product, Place } = require('./models');
+const { sequelize, User, Restaurant, Product, Place, migrateLegacyVendorRoles } = require('./models');
 const { SECRET } = require('./middleware/auth');
 const authRoutes = require('./routes/authRoutes');
 const restaurantRoutes = require('./routes/restaurantRoutes');
@@ -154,7 +154,21 @@ const joinRoomsForUser = (socket, user) => {
     socket.join('drivers');
     socket.join(`driver_${id}`);
   }
+  // Every vendor kind owns a `restaurant_<userId>` room so the existing order
+  // events keep working without per-role broadcast logic. Superette/boucherie
+  // also get a kind-specific room for future bulk announcements (e.g. "all
+  // boucheries: holiday closure").
   if (role === 'restaurant') socket.join(`restaurant_${id}`);
+  if (role === 'superette') {
+    socket.join(`restaurant_${id}`);
+    socket.join(`superette_${id}`);
+    socket.join('superettes');
+  }
+  if (role === 'boucherie') {
+    socket.join(`restaurant_${id}`);
+    socket.join(`boucherie_${id}`);
+    socket.join('boucheries');
+  }
   if (role === 'place') socket.join(`place_${id}`);
   if (role === 'admin') socket.join('admins');
 };
@@ -280,6 +294,9 @@ const syncOptions = shouldAlter ? { alter: true } : {};
 sequelize
   .sync(syncOptions)
   .then(async () => {
+    // Order matters: migration first (lifts legacy vendor roles), then seed
+    // (which only runs on a fresh DB), then accept connections.
+    await migrateLegacyVendorRoles();
     await seedDatabase();
     server.listen(PORT, () => {
       logger.info({ port: PORT, env: isProd ? 'production' : 'development' }, '🚀 GO-DELIVERY backend up');

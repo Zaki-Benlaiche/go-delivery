@@ -1,515 +1,225 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Truck, Star, Zap, ClipboardList, MapPin, Clock, Shield, Users, ArrowRight, Utensils, Phone, Activity, Sparkles, Building2, UserCircle2, ChevronRight, Smartphone } from 'lucide-react';
+import {
+  Truck, Star, Zap, ClipboardList, MapPin, Clock, Shield, Users, ArrowRight,
+  Utensils, Phone, Activity, Sparkles, Building2, UserCircle2, Smartphone,
+  ShoppingCart, Beef, CheckCircle2,
+} from 'lucide-react';
 import AuthPage from './AuthPage';
 
+// Marketing landing for non-authed visitors. Light Modern theme, six service
+// pillars (delivery + reservation + four vendor kinds), call-to-action to the
+// register flow, plus a download bridge to the Android APK.
 export default function LandingPage() {
-    const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
-    const [scrolled, setScrolled] = useState(false);
+  const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-    if (showAuth) {
-        return <AuthPage onBack={() => setShowAuth(null)} initialMode={showAuth} />;
-    }
+  if (showAuth) {
+    return <AuthPage onBack={() => setShowAuth(null)} initialMode={showAuth} />;
+  }
 
-    return (
-        <div style={{
-            minHeight: '100dvh',
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            overflowX: 'hidden',
-        }}>
-
-            {/* ===== NAVBAR ===== */}
-            <nav style={{
-                padding: '12px 20px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                background: scrolled ? 'rgba(10, 11, 14, 0.92)' : 'transparent',
-                backdropFilter: scrolled ? 'blur(20px)' : 'none',
-                WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
-                borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
-                position: 'fixed',
-                top: 0,
-                width: '100%',
-                zIndex: 100,
-                transition: 'all 0.3s ease',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <img src="/icons/icon-192.webp" alt="Réserve-vite" width={34} height={34} loading="eager" decoding="async" style={{
-                        width: '34px', height: '34px', borderRadius: '10px',
-                    }} />
-                    <span style={{ fontSize: '1rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
-                        <span style={{ color: '#ff4757' }}>Réserve</span>-vite
-                    </span>
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                        onClick={() => setShowAuth('login')}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '9px 18px', borderRadius: '50px',
-                            background: 'rgba(255,255,255,0.05)', color: 'white',
-                            border: '1px solid rgba(255,255,255,0.08)', fontWeight: 700,
-                            fontSize: '0.84rem', cursor: 'pointer',
-                        }}
-                    >
-                        <UserCircle2 size={15} /> Connexion
-                    </button>
-                    <button
-                        onClick={() => setShowAuth('register')}
-                        className="desktop-only-btn"
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            padding: '9px 18px', borderRadius: '50px',
-                            background: 'linear-gradient(135deg, #ff4757, #ff6b81)',
-                            color: 'white', border: 'none', fontWeight: 700,
-                            fontSize: '0.84rem', cursor: 'pointer',
-                            boxShadow: '0 4px 15px rgba(255,71,87,0.3)',
-                        }}
-                    >
-                        S&apos;inscrire
-                    </button>
-                </div>
-            </nav>
-
-            {/* ===== HERO SECTION ===== */}
-            <section style={{
-                paddingTop: '100px',
-                paddingBottom: '40px',
-                paddingLeft: '20px',
-                paddingRight: '20px',
-                position: 'relative',
-                overflow: 'hidden',
-            }}>
-                {/* Background glow */}
-                <div style={{
-                    position: 'absolute', top: '-10%', left: '-10%',
-                    width: '50vw', height: '50vw',
-                    background: 'radial-gradient(circle, rgba(255,71,87,0.08) 0%, transparent 60%)',
-                    borderRadius: '50%', pointerEvents: 'none',
-                }} />
-                <div style={{
-                    position: 'absolute', bottom: '-20%', right: '-10%',
-                    width: '40vw', height: '40vw',
-                    background: 'radial-gradient(circle, rgba(30,144,255,0.06) 0%, transparent 60%)',
-                    borderRadius: '50%', pointerEvents: 'none',
-                }} />
-
-                <div style={{
-                    maxWidth: '1100px', margin: '0 auto',
-                    display: 'flex', flexWrap: 'wrap', alignItems: 'center',
-                    gap: '40px', justifyContent: 'center',
-                }}>
-                    {/* Hero Text */}
-                    <div className="fade-in" style={{ flex: '1 1 360px', maxWidth: '560px', zIndex: 2 }}>
-                        {/* Badge */}
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            padding: '6px 14px', borderRadius: '50px', marginBottom: '20px',
-                            background: 'rgba(255,71,87,0.08)', border: '1px solid rgba(255,71,87,0.15)',
-                        }}>
-                            <Sparkles size={13} color="#ff4757" />
-                            <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#ff6b81' }}>Plateforme #1 en Algérie</span>
-                        </div>
-
-                        <h1 style={{
-                            fontSize: 'clamp(2rem, 4vw, 3.5rem)',
-                            lineHeight: 1.1, fontWeight: 900,
-                            letterSpacing: '-1px', marginBottom: '16px',
-                        }}>
-                            Livraison &<br />
-                            <span style={{
-                                background: 'linear-gradient(135deg, #ff4757 0%, #ffc048 100%)',
-                                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                            }}>
-                                Réservation Smart
-                            </span>
-                        </h1>
-
-                        <p style={{
-                            fontSize: 'clamp(0.88rem, 1.5vw, 1.1rem)', color: 'var(--text-muted)',
-                            lineHeight: 1.6, marginBottom: '24px', maxWidth: '480px',
-                        }}>
-                            Commandez vos plats préférés ou réservez votre tour chez le médecin sans faire la queue.
-                        </p>
-
-                        {/* CTA */}
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-                            <button
-                                onClick={() => setShowAuth('register')}
-                                style={{
-                                    padding: '14px 28px', fontSize: '0.92rem', borderRadius: '14px',
-                                    background: 'linear-gradient(135deg, #ff4757, #ff6b81)',
-                                    color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    boxShadow: '0 8px 24px rgba(255,71,87,0.3)',
-                                }}
-                            >
-                                Commencer <ArrowRight size={18} />
-                            </button>
-                            <a
-                                href="/download"
-                                style={{
-                                    padding: '14px 20px', borderRadius: '14px',
-                                    background: 'var(--bg-elevated)', color: 'var(--text)',
-                                    border: '1px solid var(--border)', textDecoration: 'none',
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    fontWeight: 600, fontSize: '0.88rem',
-                                }}
-                            >
-                                <Smartphone size={18} /> <span className="desktop-only-text">App Android</span>
-                            </a>
-                        </div>
-
-                        {/* Social proof */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '12px 16px', borderRadius: '14px',
-                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)',
-                            width: 'fit-content',
-                        }}>
-                            <div style={{ display: 'flex' }}>
-                                {[
-                                    { initials: 'MK', color: '#ff4757' },
-                                    { initials: 'SA', color: '#1e90ff' },
-                                    { initials: 'AB', color: '#2ed573' },
-                                ].map((av, idx) => (
-                                    <div key={idx} style={{
-                                        width: '30px', height: '30px', borderRadius: '50%',
-                                        background: `linear-gradient(135deg, ${av.color}, ${av.color}88)`,
-                                        border: '2px solid var(--bg)',
-                                        marginLeft: idx > 0 ? '-10px' : '0',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '0.55rem', fontWeight: 900, color: 'white',
-                                        flexShrink: 0,
-                                    }}>
-                                        {av.initials}
-                                    </div>
-                                ))}
-                            </div>
-                            <div>
-                                <div style={{ display: 'flex', gap: '1px', marginBottom: '2px' }}>
-                                    {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} color="#ffc048" fill="#ffc048" />)}
-                                </div>
-                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>+1 000 utilisateurs actifs</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Hero Visual - Desktop phone mockup */}
-                    <div className="fade-in hero-visual" style={{
-                        flex: '1 1 300px', maxWidth: '400px',
-                        display: 'flex', justifyContent: 'center', zIndex: 2,
-                    }}>
-                        <div style={{
-                            width: '240px', height: '480px',
-                            border: '8px solid #1a1c24', borderRadius: '36px',
-                            background: 'var(--bg)', boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
-                            position: 'relative', overflow: 'hidden',
-                        }}>
-                            <div style={{
-                                background: 'linear-gradient(135deg, #ff4757, #ffc048)',
-                                height: '140px', padding: '20px', color: 'white',
-                            }}>
-                                <div style={{ fontWeight: 800, fontSize: '1.1rem', marginTop: '16px' }}>Réserve-vite</div>
-                                <div style={{ fontSize: '0.78rem', opacity: 0.85 }}>Bienvenue, cher client</div>
-                            </div>
-                            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {[
-                                    { color: '#ff4757', label: '🍕 Pizza Palace', sub: '800 DA' },
-                                    { color: '#1e90ff', label: '🩺 Dr. Karim', sub: 'N° 12' },
-                                    { color: '#2ed573', label: '🍔 Burger Empire', sub: '600 DA' },
-                                ].map((item, i) => (
-                                    <div key={i} style={{
-                                        height: '60px', borderRadius: '14px',
-                                        background: 'var(--bg-elevated)', display: 'flex',
-                                        alignItems: 'center', padding: '0 14px', gap: '10px',
-                                        border: '1px solid rgba(255,255,255,0.04)',
-                                    }}>
-                                        <div style={{
-                                            width: '36px', height: '36px', borderRadius: '10px',
-                                            background: `${item.color}18`, display: 'flex',
-                                            alignItems: 'center', justifyContent: 'center',
-                                            fontSize: '1.1rem',
-                                        }}>
-                                            {item.label.split(' ')[0]}
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.78rem', fontWeight: 700 }}>{item.label.substring(2)}</div>
-                                            <div style={{ fontSize: '0.68rem', color: item.color, fontWeight: 600 }}>{item.sub}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div style={{
-                                position: 'absolute', bottom: '10px', left: '50%',
-                                transform: 'translateX(-50%)', width: '40%', height: '5px',
-                                background: 'rgba(255,255,255,0.15)', borderRadius: '10px',
-                            }} />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== SERVICE CARDS ===== */}
-            <section style={{
-                padding: '40px 20px',
-                background: 'rgba(255,255,255,0.015)',
-                borderTop: '1px solid rgba(255,255,255,0.04)',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
-            }}>
-                <div style={{
-                    maxWidth: '1100px', margin: '0 auto',
-                    display: 'flex', flexWrap: 'wrap', gap: '16px',
-                    justifyContent: 'center',
-                }}>
-                    {/* Delivery Card */}
-                    <div
-                        onClick={() => setShowAuth('register')}
-                        style={{
-                            flex: '1 1 340px', maxWidth: '540px',
-                            background: 'var(--bg-card)', border: '1px solid rgba(255,71,87,0.12)',
-                            borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
-                            transition: 'all 0.3s',
-                        }}
-                    >
-                        <div style={{ height: '150px', position: 'relative', overflow: 'hidden' }}>
-                            <img
-                                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=75"
-                                alt="Food Delivery"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                            <div style={{
-                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'linear-gradient(transparent 30%, rgba(10,11,14,0.9) 100%)',
-                            }} />
-                            <div style={{
-                                position: 'absolute', top: '12px', left: '12px',
-                                background: 'linear-gradient(135deg, #ff4757, #ff6b81)',
-                                padding: '5px 12px', borderRadius: '50px',
-                                fontSize: '0.72rem', fontWeight: 800, color: 'white',
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                            }}>
-                                <Utensils size={12} /> LIVRAISON
-                            </div>
-                        </div>
-                        <div style={{ padding: '18px 20px' }}>
-                            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '8px' }}>Livraison Premium</h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '14px' }}>
-                                Les meilleurs restaurants, livrés à votre porte en moins de 30 minutes.
-                            </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                {[
-                                    { icon: <Zap size={13} />, text: 'Express', color: '#ff4757' },
-                                    { icon: <MapPin size={13} />, text: 'Suivi GPS', color: '#ffc048' },
-                                    { icon: <Star size={13} />, text: 'Top Restos', color: '#2ed573' },
-                                    { icon: <Shield size={13} />, text: 'Sécurisé', color: '#1e90ff' },
-                                ].map((item, i) => (
-                                    <div key={i} style={{
-                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                        fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)',
-                                    }}>
-                                        <span style={{ color: item.color }}>{item.icon}</span> {item.text}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Reservation Card */}
-                    <div
-                        onClick={() => setShowAuth('register')}
-                        style={{
-                            flex: '1 1 340px', maxWidth: '540px',
-                            background: 'var(--bg-card)', border: '1px solid rgba(30,144,255,0.12)',
-                            borderRadius: '18px', overflow: 'hidden', cursor: 'pointer',
-                            transition: 'all 0.3s',
-                        }}
-                    >
-                        <div style={{ height: '150px', position: 'relative', overflow: 'hidden' }}>
-                            <img
-                                src="https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=800&q=75"
-                                alt="Reservation"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                            <div style={{
-                                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                background: 'linear-gradient(transparent 30%, rgba(10,11,14,0.9) 100%)',
-                            }} />
-                            <div style={{
-                                position: 'absolute', top: '12px', left: '12px',
-                                background: 'linear-gradient(135deg, #1e90ff, #4facfe)',
-                                padding: '5px 12px', borderRadius: '50px',
-                                fontSize: '0.72rem', fontWeight: 800, color: 'white',
-                                display: 'flex', alignItems: 'center', gap: '4px',
-                            }}>
-                                <Building2 size={12} /> RÉSERVATION
-                            </div>
-                        </div>
-                        <div style={{ padding: '18px 20px' }}>
-                            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '8px' }}>Réservation Intelligente</h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '14px' }}>
-                                Prenez votre ticket virtuel et arrivez pile quand c&apos;est votre tour.
-                            </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                {[
-                                    { icon: <Clock size={13} />, text: 'Temps réel', color: '#1e90ff' },
-                                    { icon: <Users size={13} />, text: 'File virtuelle', color: '#a55eea' },
-                                    { icon: <Phone size={13} />, text: 'Alertes', color: '#2ed573' },
-                                    { icon: <Activity size={13} />, text: 'Statut live', color: '#ffc048' },
-                                ].map((item, i) => (
-                                    <div key={i} style={{
-                                        display: 'flex', alignItems: 'center', gap: '6px',
-                                        fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-muted)',
-                                    }}>
-                                        <span style={{ color: item.color }}>{item.icon}</span> {item.text}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== WHY RÉSERVE-VITE ===== */}
-            <section style={{ padding: '48px 20px' }}>
-                <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            marginBottom: '12px', padding: '6px 14px', borderRadius: '50px',
-                            background: 'rgba(255,192,72,0.08)', color: '#ffc048', fontWeight: 700, fontSize: '0.8rem',
-                        }}>
-                            <Star size={14} fill="#ffc048" /> Pourquoi nous choisir
-                        </div>
-                        <h2 style={{ fontSize: 'clamp(1.3rem, 3vw, 2.2rem)', fontWeight: 900 }}>
-                            L&apos;excellence dans chaque détail
-                        </h2>
-                    </div>
-
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                        gap: '14px',
-                    }}>
-                        {[
-                            { icon: <Zap size={22} />, title: 'Ultra Rapide', desc: 'Livraison express en moins de 30 minutes', color: '#ff4757', bg: 'rgba(255,71,87,0.08)' },
-                            { icon: <Shield size={22} />, title: 'Sécurisé', desc: 'Données protégées, paiement sûr', color: '#2ed573', bg: 'rgba(46,213,115,0.08)' },
-                            { icon: <ClipboardList size={22} />, title: 'Tout en Un', desc: 'Resto, médecin, poste, admin...', color: '#1e90ff', bg: 'rgba(30,144,255,0.08)' },
-                            { icon: <Truck size={22} />, title: 'Livreurs Pros', desc: 'Flotte formée et fiable', color: '#a55eea', bg: 'rgba(165,94,234,0.08)' },
-                        ].map((item, i) => (
-                            <div key={i} style={{
-                                display: 'flex', alignItems: 'center', gap: '14px',
-                                padding: '16px 18px', borderRadius: '14px',
-                                background: 'var(--bg-card)', border: '1px solid rgba(255,255,255,0.04)',
-                            }}>
-                                <div style={{
-                                    width: '46px', height: '46px', borderRadius: '12px',
-                                    background: item.bg, color: item.color,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    flexShrink: 0, border: `1px solid ${item.color}20`,
-                                }}>
-                                    {item.icon}
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: 700, fontSize: '0.92rem', marginBottom: '2px' }}>{item.title}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.desc}</div>
-                                </div>
-                                <ChevronRight size={16} color="var(--text-muted)" style={{ marginLeft: 'auto', flexShrink: 0, opacity: 0.3 }} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== CTA ===== */}
-            <section style={{ padding: '0 20px 48px' }}>
-                <div style={{
-                    maxWidth: '900px', margin: '0 auto',
-                    background: 'linear-gradient(135deg, rgba(255,71,87,0.08), rgba(30,144,255,0.08))',
-                    border: '1px solid rgba(255,255,255,0.06)', borderRadius: '24px',
-                    padding: '36px 24px', textAlign: 'center',
-                    position: 'relative', overflow: 'hidden',
-                }}>
-                    <div style={{
-                        position: 'absolute', top: '-20px', right: '-20px',
-                        width: '120px', height: '120px',
-                        background: 'radial-gradient(circle, rgba(255,71,87,0.15) 0%, transparent 70%)',
-                        borderRadius: '50%', pointerEvents: 'none',
-                    }} />
-                    <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🚀</div>
-                    <h2 style={{ fontSize: 'clamp(1.2rem, 2.5vw, 1.8rem)', fontWeight: 900, marginBottom: '8px' }}>
-                        Prêt à commencer ?
-                    </h2>
-                    <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', marginBottom: '20px', maxWidth: '400px', margin: '0 auto 20px' }}>
-                        Créez votre compte gratuit et profitez de tous nos services.
-                    </p>
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={() => setShowAuth('register')}
-                            style={{
-                                padding: '14px 28px', fontSize: '0.92rem', borderRadius: '14px',
-                                background: 'linear-gradient(135deg, #ff4757, #ff6b81)',
-                                color: 'white', border: 'none', fontWeight: 800, cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                boxShadow: '0 8px 24px rgba(255,71,87,0.25)',
-                            }}
-                        >
-                            Créer un compte <ArrowRight size={18} />
-                        </button>
-                        <button
-                            onClick={() => setShowAuth('login')}
-                            style={{
-                                padding: '14px 24px', fontSize: '0.88rem', borderRadius: '14px',
-                                background: 'transparent', color: 'var(--text-muted)',
-                                border: '1px solid rgba(255,255,255,0.08)', fontWeight: 600,
-                                cursor: 'pointer',
-                            }}
-                        >
-                            J&apos;ai déjà un compte
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== FOOTER ===== */}
-            <footer style={{
-                padding: '20px',
-                borderTop: '1px solid rgba(255,255,255,0.04)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                flexWrap: 'wrap', gap: '12px',
-                maxWidth: '1100px', margin: '0 auto', width: '100%',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Truck size={14} color="#ff4757" />
-                    <span style={{ fontWeight: 800, fontSize: '0.82rem' }}>RÉSERVE-VITE</span>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
-                    © 2026 Réserve-vite. L&apos;excellence algérienne 🇩🇿
-                </p>
-            </footer>
-
-            {/* Responsive styles */}
-            <style dangerouslySetInnerHTML={{ __html: `
-                .hero-visual { display: none; }
-                .desktop-only-btn { display: none !important; }
-                .desktop-only-text { display: none; }
-                @media (min-width: 768px) {
-                    .hero-visual { display: flex !important; }
-                    .desktop-only-btn { display: flex !important; }
-                    .desktop-only-text { display: inline; }
-                }
-            `}} />
+  return (
+    <div className="landing">
+      {/* NAV */}
+      <nav className={`landing-nav ${scrolled ? 'is-scrolled' : ''}`}>
+        <div className="landing-nav-brand">
+          <img src="/icons/icon-192.webp" alt="Réserve-vite" width={34} height={34} loading="eager" decoding="async" />
+          <span>
+            <strong>Réserve</strong>-vite
+          </span>
         </div>
-    );
+        <div className="landing-nav-actions">
+          <button onClick={() => setShowAuth('login')} className="landing-nav-login">
+            <UserCircle2 size={15} /> Connexion
+          </button>
+          <button onClick={() => setShowAuth('register')} className="landing-nav-register">
+            S&apos;inscrire <ArrowRight size={14} />
+          </button>
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <section className="landing-hero">
+        <div className="landing-hero-bg-1" aria-hidden="true" />
+        <div className="landing-hero-bg-2" aria-hidden="true" />
+
+        <div className="landing-hero-inner">
+          <div className="landing-hero-text fade-in">
+            <div className="landing-badge">
+              <Sparkles size={14} /> Made in Algeria
+            </div>
+            <h1 className="landing-h1">
+              Tout livré.<br />
+              <span className="landing-h1-accent">Tout réservé.</span>
+            </h1>
+            <p className="landing-lead">
+              Restaurants, supérette, boucherie, médecin, mairie — une seule app pour vos commandes et vos tickets de
+              file d&apos;attente, partout en Algérie.
+            </p>
+            <div className="landing-cta-row">
+              <button onClick={() => setShowAuth('register')} className="btn btn-primary landing-cta-primary">
+                Commencer <ArrowRight size={16} />
+              </button>
+              <a href="/download" className="btn btn-secondary landing-cta-secondary">
+                <Smartphone size={16} /> Télécharger l&apos;APK
+              </a>
+            </div>
+            <div className="landing-meta-row">
+              <span><CheckCircle2 size={14} color="var(--success)" /> Paiement à la livraison</span>
+              <span><CheckCircle2 size={14} color="var(--success)" /> 100% en français</span>
+              <span><CheckCircle2 size={14} color="var(--success)" /> Compte vendeur gratuit</span>
+            </div>
+          </div>
+
+          <div className="landing-hero-visual fade-in">
+            <div className="landing-phone">
+              <div className="landing-phone-screen">
+                <div className="landing-phone-bar" />
+                <div className="landing-phone-card landing-phone-card-1">
+                  <div className="landing-phone-card-icon" style={{ background: 'var(--primary-glow)', color: 'var(--primary)' }}>
+                    <Utensils size={18} />
+                  </div>
+                  <div>
+                    <strong>Pizza Palace</strong>
+                    <div>30-40 min · Ouvert</div>
+                  </div>
+                </div>
+                <div className="landing-phone-card landing-phone-card-2">
+                  <div className="landing-phone-card-icon" style={{ background: 'var(--teal-glow)', color: 'var(--role-superette)' }}>
+                    <ShoppingCart size={18} />
+                  </div>
+                  <div>
+                    <strong>Supérette du Coin</strong>
+                    <div>Liste libre · Ouvert</div>
+                  </div>
+                </div>
+                <div className="landing-phone-card landing-phone-card-3">
+                  <div className="landing-phone-card-icon" style={{ background: 'var(--info-glow)', color: 'var(--info)' }}>
+                    <ClipboardList size={18} />
+                  </div>
+                  <div>
+                    <strong>Dr. Karim</strong>
+                    <div>3 personnes avant · ~45 min</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SERVICES — 6 roles */}
+      <section className="landing-section">
+        <div className="landing-section-head">
+          <span className="landing-section-tag">SERVICES</span>
+          <h2>Une plateforme, six espaces.</h2>
+          <p>Chaque rôle a son tableau de bord, ses notifications, et son flux adapté.</p>
+        </div>
+
+        <div className="landing-services-grid">
+          {SERVICES.map((s) => (
+            <div key={s.label} className="landing-service-card">
+              <div className="landing-service-icon" style={{ background: s.bg, color: s.color }}>
+                {s.icon}
+              </div>
+              <h3>{s.label}</h3>
+              <p>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section className="landing-section landing-section-alt">
+        <div className="landing-section-head">
+          <span className="landing-section-tag">EN 3 ÉTAPES</span>
+          <h2>De la commande à la livraison.</h2>
+        </div>
+
+        <div className="landing-steps">
+          {STEPS.map((s, i) => (
+            <div key={s.title} className="landing-step">
+              <div className="landing-step-num">{i + 1}</div>
+              <div className="landing-step-icon">{s.icon}</div>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* WHY */}
+      <section className="landing-section">
+        <div className="landing-section-head">
+          <span className="landing-section-tag">POURQUOI</span>
+          <h2>Pensé pour l&apos;Algérie.</h2>
+        </div>
+
+        <div className="landing-features-grid">
+          {FEATURES.map((f) => (
+            <div key={f.label} className="landing-feature">
+              <div className="landing-feature-icon">{f.icon}</div>
+              <h4>{f.label}</h4>
+              <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="landing-cta-section">
+        <div className="landing-cta-card">
+          <Sparkles size={28} color="var(--primary)" />
+          <h2>Prêt à commencer ?</h2>
+          <p>Compte gratuit en 30 secondes, aucune carte bancaire requise.</p>
+          <div className="landing-cta-row landing-cta-row-center">
+            <button onClick={() => setShowAuth('register')} className="btn btn-primary landing-cta-primary">
+              Créer un compte <ArrowRight size={16} />
+            </button>
+            <button onClick={() => setShowAuth('login')} className="btn btn-secondary landing-cta-secondary">
+              <UserCircle2 size={16} /> J&apos;ai déjà un compte
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer className="landing-footer">
+        <span>© 2025 Réserve-vite — Algérie</span>
+        <a href="/download">Télécharger l&apos;APK</a>
+      </footer>
+    </div>
+  );
 }
+
+const SERVICES = [
+  { label: 'Restaurants', icon: <Utensils size={22} />, color: 'var(--role-restaurant)', bg: 'var(--primary-glow)', desc: 'Menus, panier, suivi en temps réel.' },
+  { label: 'Supérette', icon: <ShoppingCart size={22} />, color: 'var(--role-superette)', bg: 'var(--teal-glow)', desc: 'Liste libre — le livreur fait vos courses.' },
+  { label: 'Boucherie', icon: <Beef size={22} />, color: 'var(--role-boucherie)', bg: 'rgba(190, 18, 60, 0.10)', desc: 'Demandes de viande, prix au ticket de caisse.' },
+  { label: 'Livreurs', icon: <Truck size={22} />, color: 'var(--role-driver)', bg: 'var(--success-glow)', desc: 'Acceptez des courses, fixez votre tarif.' },
+  { label: 'Médecins & admins', icon: <Building2 size={22} />, color: 'var(--role-place)', bg: 'var(--info-glow)', desc: 'Vos patients prennent un ticket à distance.' },
+  { label: 'Clients', icon: <UserCircle2 size={22} />, color: 'var(--role-client)', bg: 'var(--accent-glow)', desc: 'Tout en un, un seul compte.' },
+];
+
+const STEPS = [
+  { icon: <Smartphone size={28} color="var(--primary)" />, title: 'Choisissez', desc: 'Restaurant, supérette, boucherie ou ticket — quelques tapotements.' },
+  { icon: <Zap size={28} color="var(--accent)" />, title: 'Envoyez', desc: 'Confirmation instantanée et notification au commerce / livreur.' },
+  { icon: <Truck size={28} color="var(--info)" />, title: 'Recevez', desc: 'Suivi en direct du livreur jusqu\'à votre porte.' },
+];
+
+const FEATURES = [
+  { icon: <Shield size={20} color="var(--success)" />, label: 'Données sécurisées', desc: 'Mots de passe hashés, sessions chiffrées.' },
+  { icon: <Zap size={20} color="var(--accent)" />, label: 'Temps réel', desc: 'Sockets pour les notifications et le suivi des courses.' },
+  { icon: <MapPin size={20} color="var(--info)" />, label: 'Pensé local', desc: 'DA, français, et adresses libres — pas de GPS imposé.' },
+  { icon: <Phone size={20} color="var(--primary)" />, label: 'Paiement cash', desc: 'À la livraison, comme tout le monde fait déjà.' },
+  { icon: <Activity size={20} color="var(--violet)" />, label: 'Notifications', desc: 'Vibration et son pour ne rien rater.' },
+  { icon: <Users size={20} color="var(--role-superette)" />, label: 'Multi-rôles', desc: 'Client, vendeur, livreur, médecin — un seul code.' },
+  { icon: <Clock size={20} color="var(--role-boucherie)" />, label: 'Files de réservation', desc: 'Prenez un ticket pour le médecin sans bouger.' },
+  { icon: <Star size={20} color="var(--accent)" />, label: 'Gratuit pour démarrer', desc: 'Compte vendeur gratuit, sans engagement.' },
+];

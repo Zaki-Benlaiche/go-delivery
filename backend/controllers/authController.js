@@ -6,8 +6,16 @@ const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../lib/logger');
 
 const TOKEN_TTL = '7d';
-const ALLOWED_ROLES = new Set(['client', 'restaurant', 'driver', 'place']);
+// Roles the public register endpoint is allowed to mint. `admin` is excluded
+// on purpose — only an existing admin can promote users via /admin/users/:id/role.
+const ALLOWED_ROLES = new Set(['client', 'restaurant', 'driver', 'place', 'superette', 'boucherie']);
+// Kept for backwards-compat with older clients still POSTing `restaurantType`
+// — the new flow passes the vendor kind via `role` directly.
 const ALLOWED_RESTAURANT_TYPES = new Set(['restaurant', 'superette', 'boucherie']);
+// Roles that own a Restaurant row. Each vendor kind (regular, superette,
+// boucherie) gets its own Restaurant + Restaurant.type so the existing
+// product/order code paths keep working unchanged.
+const RESTAURANT_OWNER_ROLES = new Set(['restaurant', 'superette', 'boucherie']);
 
 const signToken = (user) =>
   jwt.sign({ id: user.id, role: user.role }, SECRET, { expiresIn: TOKEN_TTL });
@@ -44,10 +52,17 @@ exports.register = asyncHandler(async (req, res) => {
   // Side-entity creation runs in parallel where possible; today only one of
   // these branches fires, but Promise.all keeps the structure ready for a
   // future "restaurant + place owner" hybrid role.
-  if (safeRole === 'restaurant') {
-    const safeType = ALLOWED_RESTAURANT_TYPES.has(restaurantType) ? restaurantType : 'restaurant';
+  if (RESTAURANT_OWNER_ROLES.has(safeRole)) {
+    // For 'superette' / 'boucherie' the type is implied by the role itself;
+    // for plain 'restaurant' we honour the legacy restaurantType field so old
+    // signup forms keep working.
+    let safeType = safeRole;
+    if (safeRole === 'restaurant') {
+      safeType = ALLOWED_RESTAURANT_TYPES.has(restaurantType) ? restaurantType : 'restaurant';
+    }
+    const labelSuffix = safeType === 'boucherie' ? 'Boucherie' : safeType === 'superette' ? 'Supérette' : 'Shop';
     await Restaurant.create({
-      name: `${name}'s Shop`,
+      name: `${name} ${labelSuffix}`,
       userId: user.id,
       type: safeType,
     });

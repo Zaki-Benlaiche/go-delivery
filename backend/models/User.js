@@ -26,7 +26,12 @@ const User = sequelize.define('User', {
     defaultValue: '',
   },
   role: {
-    type: DataTypes.ENUM('client', 'restaurant', 'driver', 'place', 'admin'),
+    // 'superette' and 'boucherie' are first-class roles (not Restaurant subtypes
+    // any more) so the auth flow can route them straight to their own dashboard
+    // and the shopping-list ordering UX without going through restaurant menus.
+    // Legacy users that registered as 'restaurant' + Restaurant.type='superette'
+    // are migrated by models/index.js on the next sync.
+    type: DataTypes.ENUM('client', 'restaurant', 'driver', 'place', 'admin', 'superette', 'boucherie'),
     allowNull: false,
     defaultValue: 'client',
   },

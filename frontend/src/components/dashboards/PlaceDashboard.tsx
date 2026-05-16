@@ -139,7 +139,7 @@ export default function PlaceDashboard() {
             {/* Header */}
             <div style={{ background: 'var(--gradient-blue)', borderRadius: '18px', padding: 'clamp(20px, 4vw, 32px)', marginBottom: '28px', color: 'white', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 'clamp(12px, 3vw, 20px)', flexWrap: 'wrap' }}>
-                    <div className="icon-box icon-box-lg" style={{ background: 'rgba(255,255,255,0.15)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', flexShrink: 0 }}>
+                    <div className="icon-box icon-box-lg" style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', flexShrink: 0 }}>
                         {place?.icon || <ClipboardList size={28} />}
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
@@ -150,10 +150,10 @@ export default function PlaceDashboard() {
                         onClick={toggleOpenStatus}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '10px 22px', borderRadius: '50px', border: '2px solid rgba(255,255,255,0.3)',
+                            padding: '10px 22px', borderRadius: '50px', border: '2px solid rgba(255,255,255,0.4)',
                             fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
                             transition: 'all 0.2s', flexShrink: 0,
-                            background: place?.isOpen ? 'rgba(46,213,115,0.25)' : 'rgba(255,71,87,0.25)',
+                            background: place?.isOpen ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)',
                             color: 'white',
                             backdropFilter: 'blur(4px)',
                         }}
@@ -176,7 +176,7 @@ export default function PlaceDashboard() {
             </div>
 
             {/* Queue Table */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: '18px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                     <h2 style={{ margin: 0, fontSize: 'clamp(0.95rem, 2.5vw, 1.15rem)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <ClipboardList size={18} color="#1e90ff" /> File d&apos;attente du jour
@@ -195,7 +195,7 @@ export default function PlaceDashboard() {
                     <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '720px' }}>
                             <thead>
-                                <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                                <tr style={{ background: 'var(--bg-tinted)', borderBottom: '1px solid var(--border)' }}>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>N°</th>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Client</th>
                                     <th style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'left' }}>Téléphone</th>
@@ -249,14 +249,14 @@ export default function PlaceDashboard() {
                                                         <button onClick={() => saveEdit(res.id)} className="btn btn-sm" style={{ background: 'var(--info-glow)', color: '#1e90ff', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                             <Save size={12} /> Sauver
                                                         </button>
-                                                        <button onClick={() => setEditingId(null)} className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: 'none' }}>
+                                                        <button onClick={() => setEditingId(null)} className="btn btn-sm" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: 'none' }}>
                                                             Annuler
                                                         </button>
                                                     </>
                                                 ) : (
                                                     <>
                                                         {(res.status === 'waiting' || res.status === 'called') && (
-                                                            <button onClick={() => beginEdit(res)} className="btn btn-sm" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <button onClick={() => beginEdit(res)} className="btn btn-sm" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                                 <Edit2 size={12} /> Numéro
                                                             </button>
                                                         )}
