@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 
 // Top-of-app shell. Sticky on scroll, role-coloured user pill, notification
-// dropdown. Visual style is Light Modern: white-ish blur background with a
-// thin border + soft shadow rather than a heavy dark bar.
+// dropdown. Visual style is Dark Premium: smoked-glass black blur with a
+// violet-tinted hairline border.
 export default function Navbar() {
   // Atomic selectors — destructuring the whole store re-renders the navbar
   // every time *any* notification arrives, which thrashes the badge animation.

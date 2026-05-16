@@ -32,7 +32,7 @@ export default function NotificationToast() {
     >
       <div
         style={{
-          background: 'rgba(255, 255, 255, 0.96)',
+          background: 'rgba(17, 17, 20, 0.92)',
           backdropFilter: 'blur(24px) saturate(180%)',
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           borderRadius: '16px',
@@ -41,7 +41,7 @@ export default function NotificationToast() {
           alignItems: 'center',
           gap: '12px',
           border: `1px solid ${currentToast.color}40`,
-          boxShadow: `0 16px 40px rgba(15, 23, 42, 0.18), 0 0 0 1px ${currentToast.color}20`,
+          boxShadow: `0 16px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px ${currentToast.color}20`,
         }}
       >
         {/* Icon */}
